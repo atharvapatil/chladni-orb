@@ -54,10 +54,10 @@ const simVoice = new SimulatedVoice();
 
 type Theme = "dark" | "light";
 
-// the plate reads as a page element: light theme uses dark grains and no disc
+// the plate reads as a page element: light theme uses dark grains on a light felt
 const THEME_LOOK: Record<Theme, DeepPartial<ChladniParams>> = {
-  dark: { look: { color: "#f3ead8", plateAlpha: 1, amount: 1 } },
-  light: { look: { color: "#2b2520", plateAlpha: 0, amount: 0.22 } },
+  dark: { look: { color: "#f3ead8", plateAlpha: 1, plateColor: "#1a1a1c", amount: 1 } },
+  light: { look: { color: "#2b2520", plateAlpha: 1, plateColor: "#e9e6df", amount: 1 } },
 };
 
 function initialTheme(): Theme {

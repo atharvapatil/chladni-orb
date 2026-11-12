@@ -164,7 +164,12 @@ export function createChladniPlate(
       canvas.width = sh.canvas.width;
       canvas.height = sh.canvas.height;
     }
-    ctx2d?.drawImage(sh.canvas, 0, 0);
+    // "copy" replaces dst pixels incl. alpha — source-over would accumulate
+    // translucent regions (halo, transparent plate) into an opaque dark band
+    if (ctx2d) {
+      ctx2d.globalCompositeOperation = "copy";
+      ctx2d.drawImage(sh.canvas, 0, 0);
+    }
   };
 
   const loop = (now: number) => {

@@ -197,6 +197,7 @@ uniform int uLook;          // 0 textured, 1 classic, 2 ink
 uniform vec3 uColor;
 uniform vec2 uLight;        // lamp x,y
 uniform float uPlate;
+uniform vec3 uPlateColor;   // felt/surface colour
 uniform float uPlateAlpha;  // 1 opaque disc; 0 draws only the sand/ink
 uniform float uExposure;
 uniform float uHaloAmp;
@@ -215,9 +216,9 @@ void main() {
   float alpha = 0.0;
   if (mask > 0.5) {
     vec3 plate;
-    if (uLook == 0) plate = vec3(0.10, 0.10, 0.11);
-    else if (uLook == 1) plate = vec3(0.34, 0.34, 0.36) * (0.9 + 0.1 * sin(length(p) * 140.0));
-    else plate = vec3(0.13, 0.13, 0.13);
+    if (uLook == 0) plate = uPlateColor;
+    else if (uLook == 1) plate = uPlateColor * 3.4 * (0.9 + 0.1 * sin(length(p) * 140.0));
+    else plate = uPlateColor * 1.3;
     col = plate * uPlate;
     alpha = 1.0;
     if (uLook < 2) {

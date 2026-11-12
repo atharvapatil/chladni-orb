@@ -66,6 +66,8 @@ export interface ChladniParams {
     plateBrightness: number;
     /** 0..1 plate surface opacity; 0 draws only the sand/ink, no disc. */
     plateAlpha: number;
+    /** HSL/HEX plate surface colour (felt). */
+    plateColor: string;
     /** −1..1 lamp position. */
     lightX: number;
     lightY: number;
@@ -116,6 +118,7 @@ export const DEFAULT_PARAMS: ChladniParams = {
     multiTone: "physical",
     plateBrightness: 1,
     plateAlpha: 1,
+    plateColor: "#1a1a1c",
     lightX: -0.5,
     lightY: 0.8,
     exposure: 1,
@@ -400,6 +403,11 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 1,
     step: 0.01,
     help: "Opacity of the plate surface. 0 draws only the sand on whatever is behind the canvas.",
+  },
+  "look.plateColor": {
+    label: "Plate color",
+    kind: "color",
+    help: "Colour of the plate surface (felt).",
   },
   "look.lightX": {
     label: "Light X",

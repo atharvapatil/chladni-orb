@@ -221,6 +221,8 @@ export interface ChladniParams {
     plateBrightness: number;
     /** 0..1 plate surface opacity; 0 draws only the sand (ours, not Figura). †1 */
     plateAlpha: number;
+    /** HSL/HEX plate surface colour (ours, not Figura). †#1a1a1c */
+    plateColor: string;
     /** −1..1 lamp position. †(−0.5, 0.8) */
     lightX: number;
     lightY: number;
