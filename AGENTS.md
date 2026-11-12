@@ -43,6 +43,7 @@ pnpm release          # build + changeset publish
 
 ## Phase status
 
-Phases 0-4 and 6 (publish prep) done. Remaining: Phase 5 Lab model (Ritz
-free-edge eigen-solve), replacing the `<user>` GitHub placeholders in READMEs
-and package.json before the first `pnpm release`.
+Phases 0-6 done, including Phase 5 Lab model (exact free-edge circle +
+Rayleigh–Ritz rectangle, mode atlas). Remaining: replacing the `<user>`
+GitHub placeholders in READMEs and package.json before the first
+`pnpm release`.

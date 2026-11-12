@@ -1,4 +1,6 @@
-export { besselJ, besselZeros } from "./bessel";
+export { besselI, besselJ, besselZeros } from "./bessel";
+export { LabModel, type LabAtlas } from "./lab/LabModel";
+export { circularRoots, shearF, type CircularRoot } from "./lab/circular";
 export {
   AnalyticalModel,
   dispersionHz,

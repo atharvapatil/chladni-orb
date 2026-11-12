@@ -116,16 +116,51 @@ sorted into the table by index). Frequencies $\omega_{n,s} = c\,k_{n,s}$
 for a *membrane* (drum); Chladni plates are free-edge, but fixed-rim zeros
 still produce convincing figures and are our v1 fallback.
 
-### Free edge (physically correct)
+### Free edge (physically correct) — implemented in `physics/lab/`
 
-For a free-edge Kirchhoff plate, $k$ satisfies a transcendental equation
-coupling $J_n$ and $I_n$ (modified Bessel) derived from vanishing moment
-and Kirchhoff shear at $r = R$; the eigenvalues $\lambda_{n,s} = k_{n,s}R$
-depend on $\nu$. Itao & Crandall (1979) computed them for $\nu = 0.33$;
-Leissa's *Vibration of Plates* tabulates the same numbers. **UNKNOWN /
-to be filled from the paper before Phase 5** — do not hand-tabulate from
-memory. For v1 we use the fixed-rim zeros above with a stiffness term;
-the *nodal patterns* differ mainly in the rim behaviour, masked by sand.
+For a free-edge Kirchhoff plate, $W(r,\theta) = R(r)\,\cos n\theta$ with
+$R(r) = J_n(kr) + C\,I_n(kr)$, $\lambda = kR$. The free edge at $r = R$
+requires vanishing moment and Kirchhoff shear:
+
+$$R'' + \nu\Big(\frac{R'}{r} - \frac{n^2 R}{r^2}\Big) = 0,\qquad
+R''' + \frac{R''}{r} - \bigl(1 + n^2(2-\nu)\bigr)\frac{R'}{r^2} + n^2(3-\nu)\frac{R}{r^3} = 0$$
+
+$C$ falls out of the moment equation; the shear residual $F(\lambda)$
+(scanned + bisected) yields the eigenvalues. Leissa *Vibration of
+Plates* NASA SP-160 Table 2.5 / Itao & Crandall (1979), $\nu = 0.33$ —
+$\lambda^2$:
+
+| (n,s) | (2,0) | (0,1) | (3,0) | (1,1) | (4,0) | (5,0) | (2,1) | (0,2) | (6,0) | (3,1) | (1,2) | (4,1) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| λ² | 5.262 | 9.069 | 12.244 | 20.513 | 21.527 | 33.062 | 35.243 | 38.507 | 46.809 | 52.921 | 59.859 | 73.378 |
+
+Frequency $\omega = (\lambda^2/R^2)\sqrt{D/\rho h_{eff}}$ with the sand
+mass folded into $\rho h_{eff}$. $n=0,1$ have no $s=0$ elastic root
+(rigid modes). Pretension is ignored for the circle (membrane term
+incompatible with the exact form) — limitation.
+
+### Rayleigh–Ritz free rectangle (`physics/lab/ritz.ts`)
+
+For non-circular shapes we minimise the Kirchhoff energy over products
+$X_i(x)\,Y_j(y)$ of free–free beam functions ($N=9$, 81 terms):
+
+$$K = D\bigl[A^{22}B^{00} + A^{00}B^{22} + \nu(A^{20}B^{02} + A^{02}B^{20}) + 2(1-\nu)A^{11}B^{11}\bigr] + T\bigl[A^{11}B^{00} + A^{00}B^{11}\bigr],\quad
+M = \rho h_{eff}\,A^{00}B^{00}$$
+
+$Kv = \omega^2 Mv$ via Cholesky + Jacobi eigen-solve; the three rigid
+modes are dropped. Validated against Leissa 1973 (36-term Ritz,
+free square, $\nu=0.3$): $\lambda^2 = 13.489, 19.789, 24.432, 35.024,
+35.024, 61.526$ — our 81-term upper bound lands just below each value.
+
+### Mode atlas
+
+Lab shapes (exact circle or Ritz rectangle) are precomputed on a
+$96\times96$ grid per mode and packed into a texture atlas (16 tiles
+per row); the field shader samples them like any other basis, and
+`evalMode` bilinearly interpolates them for the mixer. The solver runs
+incrementally (`LabModel.step(budgetMs)`), publishing a `version` bump
+per solution so the GPU texture is only re-uploaded on change. Tip mass
+and support spring are accepted parameters but not yet modelled.
 
 ### Computing $J_n$ in JS / GLSL
 

@@ -1,7 +1,7 @@
 import type { ChladniParams } from "../params";
 import { besselJ, besselZeros } from "./bessel";
 
-export type ModeBasis = "rect" | "polar";
+export type ModeBasis = "rect" | "polar" | "atlas";
 
 export interface Mode {
   basis: ModeBasis;
@@ -15,6 +15,8 @@ export interface Mode {
    *  (same k: polar cos/sin, rect ±). Pairs are always adjacent after
    *  sorting and are summed coherently by the mixer/renderer. */
   pair: 0 | 1 | 2;
+  /** atlas modes only: G×G grid over u,v ∈ [−1,1], max|φ| normalised to 1 */
+  shape?: { data: Float32Array; size: number };
   /** wavenumber rad/m */
   k: number;
   /** Hz */
@@ -44,6 +46,22 @@ function besselZero(n: number, m: number): number {
  * looked up from the memoised table.
  */
 export function evalMode(mode: Mode, u: number, v: number, zero?: number): number {
+  if (mode.basis === "atlas" && mode.shape) {
+    // bilinear sample, clamped to the grid edge
+    const s = mode.shape.size;
+    const gx = Math.min(s - 1e-4, Math.max(0, (u + 1) * 0.5 * (s - 1)));
+    const gy = Math.min(s - 1e-4, Math.max(0, (v + 1) * 0.5 * (s - 1)));
+    const x0 = Math.floor(gx);
+    const y0 = Math.floor(gy);
+    const fx = gx - x0;
+    const fy = gy - y0;
+    const d = mode.shape.data;
+    const i00 = d[y0 * s + x0]!;
+    const i10 = d[y0 * s + x0 + 1]!;
+    const i01 = d[(y0 + 1) * s + x0]!;
+    const i11 = d[(y0 + 1) * s + x0 + 1]!;
+    return (i00 * (1 - fx) + i10 * fx) * (1 - fy) + (i01 * (1 - fx) + i11 * fx) * fy;
+  }
   if (mode.basis === "rect") {
     const { n, m } = mode;
     return (
@@ -62,13 +80,14 @@ export function evalMode(mode: Mode, u: number, v: number, zero?: number): numbe
 
 const POISSON_STUDIO = 0.3;
 
-/** Mixed membrane + stiffness dispersion: ω² = (T k² + D k⁴) / (ρ h). */
+/** Mixed membrane + stiffness dispersion: ω² = (T k² + D k⁴) / (ρ h).
+ *  Studio model only — the lab model gets its frequencies from the
+ *  Ritz/exact solvers in physics/lab/. */
 export function dispersionHz(k: number, p: ChladniParams): number {
-  const lab = p.plate.model === "lab";
-  const h = (lab ? p.lab.thickness : p.studio.thickness) * 1e-3; // mm → m
-  const E = (lab ? p.lab.elasticity : p.studio.elasticity) * 1e9; // GPa → Pa
-  const nu = lab ? p.lab.poisson : POISSON_STUDIO;
-  const T = lab ? p.lab.pretension : p.studio.tension;
+  const h = p.studio.thickness * 1e-3; // mm → m
+  const E = p.studio.elasticity * 1e9; // GPa → Pa
+  const nu = POISSON_STUDIO;
+  const T = p.studio.tension;
   const rho = p.plate.density;
   const D = (E * h * h * h) / (12 * (1 - nu * nu));
   const k2 = k * k;

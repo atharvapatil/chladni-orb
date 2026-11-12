@@ -56,9 +56,11 @@ export function App() {
   const initial = useMemo(() => {
     const q = new URLSearchParams(location.search);
     const preset = q.get("preset");
-    return preset && PRESETS[preset]
-      ? mergeParams(DEFAULT_PARAMS, PRESETS[preset].params)
-      : DEFAULT_PARAMS;
+    const base =
+      preset && PRESETS[preset]
+        ? mergeParams(DEFAULT_PARAMS, PRESETS[preset].params)
+        : DEFAULT_PARAMS;
+    return q.get("model") === "lab" ? mergeParams(base, { plate: { model: "lab" } }) : base;
   }, []);
   const [params, setParams] = useState<ChladniParams>(initial);
   const [patch, setPatch] = useState<DeepPartial<ChladniParams>>(() =>
@@ -107,11 +109,13 @@ export function App() {
         .join(", ");
       setStatus(
         p.supported
-          ? p.level.tremor > 0.5
-            ? "listening · trembling"
-            : n > 0
-              ? `listening · ${n} partial${n === 1 ? "" : "s"} (${list}${n > 6 ? "…" : ""} Hz)`
-              : "listening · silence"
+          ? p.level.solving
+            ? "lab · solving…"
+            : p.level.tremor > 0.5
+              ? "listening · trembling"
+              : n > 0
+                ? `listening · ${n} partial${n === 1 ? "" : "s"} (${list}${n > 6 ? "…" : ""} Hz)`
+                : "listening · silence"
           : "WebGL2 unavailable — static fallback",
       );
     }, 250);

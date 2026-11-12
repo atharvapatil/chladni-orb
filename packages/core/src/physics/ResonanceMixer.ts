@@ -44,6 +44,20 @@ export class ResonanceMixer {
     const fLowest = modes.length > 0 ? modes[0]!.freq : 1;
     const decayS = Math.max(1e-3, listening.decay / 1000);
 
+    // exciter field value: the Lab model drives through a finite contact
+    // disc (contact mm vs plate radius 5·size mm), averaged over its rim
+    // plus the centre point
+    const contactR = lab.contact / (plate.size * 5);
+    const phiAt = (mode: Mode, x: number, y: number): number => {
+      if (plate.model !== "lab") return evalMode(mode, x, y);
+      let s = evalMode(mode, x, y);
+      for (let i = 0; i < 8; i++) {
+        const th = (i * Math.PI) / 4;
+        s += evalMode(mode, x + contactR * Math.cos(th), y + contactR * Math.sin(th));
+      }
+      return s / 9;
+    };
+
     let energy = 0;
     for (const p of partials) energy += p.amp;
 
@@ -73,9 +87,7 @@ export class ResonanceMixer {
           factor = Math.pow(1 - Math.min(1, Math.abs(evalMode(mode, 0, 0))), this.beta);
         } else {
           factor =
-            1 -
-            e +
-            e * Math.pow(Math.abs(evalMode(mode, plate.exciterX, plate.exciterY)), this.beta);
+            1 - e + e * Math.pow(Math.abs(phiAt(mode, plate.exciterX, plate.exciterY)), this.beta);
         }
         settle(k, raw * factor);
         continue;
@@ -90,8 +102,8 @@ export class ResonanceMixer {
         ci = Math.pow(1 - Math.min(1, Math.abs(evalMode(mode, 0, 0))), this.beta);
         cj = Math.pow(1 - Math.min(1, Math.abs(evalMode(other, 0, 0))), this.beta);
       } else {
-        ci = evalMode(mode, plate.exciterX, plate.exciterY);
-        cj = evalMode(other, plate.exciterX, plate.exciterY);
+        ci = phiAt(mode, plate.exciterX, plate.exciterY);
+        cj = phiAt(other, plate.exciterX, plate.exciterY);
       }
       const len = Math.hypot(ci, cj);
       if (len < 1e-9) {

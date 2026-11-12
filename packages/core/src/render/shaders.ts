@@ -48,6 +48,7 @@ precision highp float;
 uniform sampler2D uBessel;
 uniform vec4 uModeA[${MAX_MODES}]; // basis(0 rect,1 polar), n, m, sign
 uniform vec4 uModeB[${MAX_MODES}]; // bessel zero, coef, freq, pair(0/1/2)
+uniform sampler2D uAtlas;         // mode-shape tiles for basis=2 (16×96 px per tile, 8 rows)
 uniform int uModeCount;
 uniform float uMorph;    // 0 physical, 1 morph
 uniform float uTime;
@@ -82,6 +83,12 @@ void main() {
         prod += A.w * cos(m * PI * q.x * 0.5) * cos(n * PI * q.y * 0.5);
       }
       phi = prod;
+    } else if (A.x > 1.5) {
+      // atlas mode: tile index in A.y, bilinear sample over q ∈ [−1,1]
+      float idx = A.y;
+      vec2 tuv = clamp(q * 0.5 + 0.5, 0.0, 1.0);
+      phi = texture(uAtlas, vec2((mod(idx, 16.0) + tuv.x) / 16.0,
+                                (floor(idx / 16.0) + tuv.y) / 8.0)).r;
     } else {
       float n = A.y;
       float r = length(p);

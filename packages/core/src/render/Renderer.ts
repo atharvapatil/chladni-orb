@@ -17,6 +17,15 @@ export interface RenderFrame {
   modes: readonly Mode[];
   /** signed per-mode coefficients from ResonanceMixer */
   coeffs: Float32Array;
+  /** lab atlas (packed mode-shape tiles); re-uploaded when version changes */
+  atlas?: {
+    data: Float32Array;
+    tileSize: number;
+    cols: number;
+    width: number;
+    height: number;
+    version: number;
+  } | null;
   energy: number;
   tremor: number;
   params: ChladniParams;
@@ -84,6 +93,8 @@ export class Renderer {
   private sandProg!: WebGLProgram;
   private compositeProg!: WebGLProgram;
   private besselTex!: WebGLTexture;
+  private atlasTex: WebGLTexture | null = null;
+  private atlasVersion = -1;
   private field!: Target;
   private posA!: Target;
   private posB!: Target;
@@ -187,6 +198,15 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
+    // atlas texture placeholder; sized on first upload
+    this.atlasTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.atlasVersion = -1;
+
     this.field = this.makeTarget(this.fieldRes, this.fieldRes, rgInternal, gl.RG, chanType);
     this.posA = this.makeTarget(this.P, this.P, rgInternal, gl.RG, chanType);
     this.posB = this.makeTarget(this.P, this.P, rgInternal, gl.RG, chanType);
@@ -238,8 +258,8 @@ export class Renderer {
     const count = Math.min(f.modes.length, MAX_MODES);
     for (let i = 0; i < count; i++) {
       const m = f.modes[i]!;
-      this.modeA[i * 4] = m.basis === "rect" ? 0 : 1;
-      this.modeA[i * 4 + 1] = m.n;
+      this.modeA[i * 4] = m.basis === "rect" ? 0 : m.basis === "atlas" ? 2 : 1;
+      this.modeA[i * 4 + 1] = m.basis === "atlas" ? i : m.n; // atlas tile index
       this.modeA[i * 4 + 2] = m.m;
       this.modeA[i * 4 + 3] = m.sign;
       this.modeB[i * 4] = m.basis === "polar" ? m.k * (p.plate.size / 200) : 0; // k·R = j_{n,m}
@@ -250,6 +270,24 @@ export class Renderer {
     const aspect = p.plate.shape === "rectangle" ? p.plate.aspect : 1;
     const shapeIdx = SHAPE_INDEX[p.plate.shape];
     const morph = p.look.multiTone === "morph" ? 1 : 0;
+
+    // upload the atlas when the lab solver publishes a new version
+    if (f.atlas && f.atlas.version !== this.atlasVersion && this.atlasTex) {
+      const half = this.sh.floatKind === "half";
+      gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        half ? gl.R16F : gl.R32F,
+        f.atlas.width,
+        f.atlas.height,
+        0,
+        gl.RED,
+        half ? gl.HALF_FLOAT : gl.FLOAT,
+        half ? floatToHalfBits(f.atlas.data) : f.atlas.data,
+      );
+      this.atlasVersion = f.atlas.version;
+    }
 
     // 1. field pass
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.field.fb);
@@ -264,6 +302,7 @@ export class Renderer {
     gl.uniform1f(this.loc(this.fieldProg, "uAspect"), aspect);
     gl.uniform1i(this.loc(this.fieldProg, "uShape"), shapeIdx);
     this.bindTex(0, this.besselTex, this.loc(this.fieldProg, "uBessel"));
+    if (this.atlasTex) this.bindTex(1, this.atlasTex, this.loc(this.fieldProg, "uAtlas"));
     this.quad();
 
     // 2. particle init / update

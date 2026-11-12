@@ -2,6 +2,7 @@ import { PartialAnalyser, type SpectrumSource } from "./audio/PartialAnalyser";
 import type { SpectralPartial } from "./audio/peaks";
 import { DEFAULT_PARAMS, mergeParams, type ChladniParams, type DeepPartial } from "./params";
 import { AnalyticalModel } from "./physics/modes";
+import { LabModel } from "./physics/lab/LabModel";
 import { ResonanceMixer } from "./physics/ResonanceMixer";
 import { Renderer } from "./render/Renderer";
 import { getSharedGL } from "./render/context";
@@ -32,8 +33,9 @@ export interface ChladniPlate {
   stop(): void;
   destroy(): void;
   readonly partials: readonly SpectralPartial[];
-  /** per-frame signal level from the mixer */
-  readonly level: { energy: number; tremor: number };
+  /** per-frame signal level from the mixer; `solving` while the lab
+   *  model is computing (analytical modes are used as a fallback) */
+  readonly level: { energy: number; tremor: number; solving: boolean };
   readonly supported: boolean;
 }
 
@@ -63,7 +65,7 @@ export function createChladniPlate(
       stop() {},
       destroy() {},
       partials: [],
-      level: { energy: 0, tremor: 0 },
+      level: { energy: 0, tremor: 0, solving: false },
       supported: false,
     };
   }
@@ -73,6 +75,8 @@ export function createChladniPlate(
     particleTexSize: options?.particleTexSize,
   });
   const model = new AnalyticalModel();
+  const lab = new LabModel();
+  let labResetPending = false;
   const mixer = new ResonanceMixer();
   const dprCap = options?.pixelRatio ?? Math.min(globalThis.devicePixelRatio || 1, 2);
   const reducedMotion =
@@ -87,7 +91,7 @@ export function createChladniPlate(
   let last = 0;
   let time = 0;
   let lastPartials: readonly SpectralPartial[] = [];
-  const level = { energy: 0, tremor: 0 };
+  const level = { energy: 0, tremor: 0, solving: false };
   let needsFrame = true;
 
   const setSource = (a: SpectrumSource | AnalyserNode | null) => {
@@ -119,12 +123,35 @@ export function createChladniPlate(
 
     const partials = pa ? pa.update(dt, params.listening) : [];
     lastPartials = partials;
-    const modes = model.modes(params);
+    let modes;
+    let atlas = null;
+    if (params.plate.model === "lab") {
+      // lab: exact/Ritz free-edge solver; falls back to analytical modes
+      // while a fresh solution is still cooking
+      const labModes = lab.modes(params);
+      lab.step(6);
+      level.solving = lab.status !== "ready";
+      if (lab.status === "solving") labResetPending = true;
+      if (lab.status === "ready" && labModes.length > 0) {
+        modes = labModes;
+        atlas = lab.atlas;
+        if (labResetPending) {
+          renderer.resetSand();
+          labResetPending = false;
+        }
+      } else {
+        modes = model.modes(params);
+      }
+    } else {
+      level.solving = false;
+      modes = model.modes(params);
+    }
     const mix = mixer.update(dt, partials, modes, params);
     level.energy = mix.energy;
     level.tremor = mix.tremor;
     renderer.render({
       modes,
+      atlas,
       coeffs: mix.coeffs,
       energy: mix.energy,
       tremor: mix.tremor,

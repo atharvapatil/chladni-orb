@@ -63,17 +63,17 @@ to stay clear while you play" (p. 11):
 each partial drives the plate at its own frequency; partials superpose
 (p. 11–12):
 
-| Param      | Range            | Default | Notes                                                |
-| ---------- | ---------------- | ------- | ---------------------------------------------------- |
-| Thickness  | 0.05–12 mm       | UNKNOWN |                                                      |
-| Sand       | 0–300 g          | UNKNOWN | More sand lowers each figure in pitch                |
-| Elasticity | 0.1–450 GPa      | UNKNOWN | Aluminium ≈ 69                                       |
-| Poisson    | 0.05–0.49        | UNKNOWN | Sideways swell on bending                            |
-| Loss       | 0.001–0.2        | UNKNOWN | Damping; higher widens resonances and blends figures |
-| Contact    | 0.5–20 mm        | UNKNOWN | Radius of the tip pushing the plate                  |
-| Mass       | 0–200 g          | UNKNOWN | Mass moving with the tip ("tip mass")                |
-| Support    | 0–10 000 000 N/m | UNKNOWN | Spring holding the tip                               |
-| Pretension | 0–10 000 N/m     | UNKNOWN | In-plane tension; solid plates use 0                 |
+| Param      | Range            | Default | Notes                                                                                |
+| ---------- | ---------------- | ------- | ------------------------------------------------------------------------------------ |
+| Thickness  | 0.05–12 mm       | UNKNOWN |                                                                                      |
+| Sand       | 0–300 g          | UNKNOWN | More sand lowers each figure in pitch                                                |
+| Elasticity | 0.1–450 GPa      | UNKNOWN | Aluminium ≈ 69                                                                       |
+| Poisson    | 0.05–0.49        | UNKNOWN | Sideways swell on bending                                                            |
+| Loss       | 0.001–0.2        | UNKNOWN | Damping; higher widens resonances and blends figures                                 |
+| Contact    | 0.5–20 mm        | UNKNOWN | Radius of the tip pushing the plate (accepted: finite exciter disc in the Lab mixer) |
+| Mass       | 0–200 g          | UNKNOWN | Mass moving with the tip ("tip mass") — accepted, no effect yet                      |
+| Support    | 0–10 000 000 N/m | UNKNOWN | Spring holding the tip — accepted, no effect yet                                     |
+| Pretension | 0–10 000 N/m     | UNKNOWN | In-plane tension; solid plates use 0 (Ritz model only; ignored for the circle)       |
 
 Changing the model or the number of partials spreads fresh sand (p. 12).
 

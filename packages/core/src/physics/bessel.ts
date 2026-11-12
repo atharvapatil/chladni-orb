@@ -20,6 +20,20 @@ export function besselJ(n: number, x: number): number {
   return sum;
 }
 
+/** Modified Bessel I_n(x) for integer n >= 0. Series, good for x <= ~30. */
+export function besselI(n: number, x: number): number {
+  if (x < 0) return besselI(n, -x) * (n % 2 === 0 ? 1 : -1);
+  if (x === 0) return n === 0 ? 1 : 0;
+  let sum = 0;
+  let term = Math.pow(x / 2, n) / factorial(n);
+  for (let s = 0; s < 80; s++) {
+    sum += term;
+    if (Math.abs(term) < 1e-15) break;
+    term *= ((x / 2) * (x / 2)) / ((s + 1) * (s + 1 + n));
+  }
+  return sum;
+}
+
 function factorial(k: number): number {
   let f = 1;
   for (let i = 2; i <= k; i++) f *= i;
