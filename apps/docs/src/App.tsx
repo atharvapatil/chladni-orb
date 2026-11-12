@@ -52,7 +52,20 @@ function diffParams(base: ChladniParams, cur: ChladniParams): DeepPartial<Chladn
 
 const simVoice = new SimulatedVoice();
 
+type Theme = "dark" | "light";
+
+// the plate reads as a page element: light theme uses dark grains and no disc
+const THEME_LOOK: Record<Theme, DeepPartial<ChladniParams>> = {
+  dark: { look: { color: "#f3ead8", plateAlpha: 1, amount: 1 } },
+  light: { look: { color: "#2b2520", plateAlpha: 0, amount: 0.22 } },
+};
+
+function initialTheme(): Theme {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+
 export function App() {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const initial = useMemo(() => {
     const q = new URLSearchParams(location.search);
     const preset = q.get("preset");
@@ -60,7 +73,8 @@ export function App() {
       preset && PRESETS[preset]
         ? mergeParams(DEFAULT_PARAMS, PRESETS[preset].params)
         : DEFAULT_PARAMS;
-    return q.get("model") === "lab" ? mergeParams(base, { plate: { model: "lab" } }) : base;
+    const themed = mergeParams(base, THEME_LOOK[initialTheme()]);
+    return q.get("model") === "lab" ? mergeParams(themed, { plate: { model: "lab" } }) : themed;
   }, []);
   const [params, setParams] = useState<ChladniParams>(initial);
   const [patch, setPatch] = useState<DeepPartial<ChladniParams>>(() =>
@@ -90,6 +104,21 @@ export function App() {
     });
     setParams((prev) => mergeParams(prev, p));
   }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => {
+      const next: Theme = t === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("chladni-theme", next);
+      return next;
+    });
+  }, []);
+
+  // keep the plate in tune with the page theme (Tune panel still overrides)
+  useEffect(() => {
+    const look = THEME_LOOK[theme].look;
+    if (look) applyPatch({ look });
+  }, [theme, applyPatch]);
 
   const applyPreset = useCallback((key: string) => {
     const p = PRESETS[key];
@@ -254,6 +283,13 @@ export function App() {
 
   return (
     <main>
+      <button
+        className="themetoggle"
+        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+        onClick={toggleTheme}
+      >
+        {theme === "dark" ? "☀ Light" : "☾ Dark"}
+      </button>
       <h1>chladni</h1>
       <p className="tagline">
         A voice-reactive Chladni plate for the web — sound in, sand figures out.
@@ -370,7 +406,15 @@ export function App() {
       <div className="how">
         {demos.map((d, i) => (
           <figure key={i}>
-            <ChladniPlate params={d.p as DeepPartial<ChladniParams>} analyser={simVoice} />
+            <ChladniPlate
+              params={
+                {
+                  ...d.p,
+                  look: { ...THEME_LOOK[theme].look, ...(d.p as { look?: object }).look },
+                } as DeepPartial<ChladniParams>
+              }
+              analyser={simVoice}
+            />
             <figcaption>{d.cap}</figcaption>
           </figure>
         ))}

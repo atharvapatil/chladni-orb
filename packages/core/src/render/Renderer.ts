@@ -369,6 +369,7 @@ export class Renderer {
     gl.uniform3f(this.loc(this.compositeProg, "uColor"), rgb[0], rgb[1], rgb[2]);
     gl.uniform2f(this.loc(this.compositeProg, "uLight"), p.look.lightX, p.look.lightY);
     gl.uniform1f(this.loc(this.compositeProg, "uPlate"), p.look.plateBrightness);
+    gl.uniform1f(this.loc(this.compositeProg, "uPlateAlpha"), p.look.plateAlpha);
     gl.uniform1f(this.loc(this.compositeProg, "uExposure"), p.look.exposure);
     gl.uniform1f(
       this.loc(this.compositeProg, "uHaloAmp"),

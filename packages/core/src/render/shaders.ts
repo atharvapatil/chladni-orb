@@ -197,6 +197,7 @@ uniform int uLook;          // 0 textured, 1 classic, 2 ink
 uniform vec3 uColor;
 uniform vec2 uLight;        // lamp x,y
 uniform float uPlate;
+uniform float uPlateAlpha;  // 1 opaque disc; 0 draws only the sand/ink
 uniform float uExposure;
 uniform float uHaloAmp;
 uniform float uDScale;      // density -> coverage scale
@@ -232,7 +233,11 @@ void main() {
         float diff = clamp(dot(nrm, L), 0.0, 1.0);
         sc *= 0.35 + 0.85 * diff;
       }
-      col = mix(col, sc, g);
+      // plateAlpha 0 keeps only the grains: colour and alpha both from
+      // coverage — shaped so transient/noise sand doesn't paint a disc
+      float gA = smoothstep(0.55, 0.92, g);
+      col = mix(sc, mix(col, sc, g), uPlateAlpha);
+      alpha = mix(gA, 1.0, uPlateAlpha);
     } else {
       float lines = smoothstep(0.08 + 0.35 * uInk.x, 0.0, field);
       float valleys = uInk.z * smoothstep(0.6, 0.05, field) * 0.35;
@@ -245,13 +250,14 @@ void main() {
       }
       ink += uInk.w * glow * 0.125 * 0.5;
       ink = clamp(uInk.y * ink, 0.0, 1.0);
-      col = mix(col, uColor, ink);
+      col = mix(uColor, mix(col, uColor, ink), uPlateAlpha);
+      alpha = mix(ink, 1.0, uPlateAlpha);
     }
   } else {
     float r = length(p);
     float halo = max(0.0, 1.0 - max(0.0, r - 1.0) * 3.0) * uHaloAmp;
     col = uColor * halo;
-    alpha = halo;
+    alpha = halo * uPlateAlpha;
   }
   col *= uExposure;
   outColor = vec4(col * alpha, alpha); // premultiplied

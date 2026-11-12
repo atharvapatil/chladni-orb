@@ -219,6 +219,8 @@ export interface ChladniParams {
     multiTone: MultiTone; // †"physical"
     /** 0..2 plate brightness. †1 */
     plateBrightness: number;
+    /** 0..1 plate surface opacity; 0 draws only the sand (ours, not Figura). †1 */
+    plateAlpha: number;
     /** −1..1 lamp position. †(−0.5, 0.8) */
     lightX: number;
     lightY: number;
