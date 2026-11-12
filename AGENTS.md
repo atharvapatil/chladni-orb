@@ -43,6 +43,6 @@ pnpm release          # build + changeset publish
 
 ## Phase status
 
-Phase 2 done: @chladni/core has params, audio (PartialAnalyser, sources,
-SimulatedVoice), physics (AnalyticalModel, ResonanceMixer), WebGL2 render and
-the createChladniPlate API. Next: @chladni/react wrapper and the docs playground.
+Phases 0-4 and 6 (publish prep) done. Remaining: Phase 5 Lab model (Ritz
+free-edge eigen-solve), replacing the `<user>` GitHub placeholders in READMEs
+and package.json before the first `pnpm release`.

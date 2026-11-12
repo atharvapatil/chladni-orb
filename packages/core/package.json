@@ -27,5 +27,25 @@
     "tsup": "8.5.1",
     "typescript": "5.9.3",
     "vitest": "5.0.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/<user>/chladni.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://<user>.github.io/chladni/",
+  "keywords": [
+    "chladni",
+    "cymatics",
+    "audio-visualizer",
+    "voice-ui",
+    "webgl2",
+    "web-audio"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

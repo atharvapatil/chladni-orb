@@ -25,8 +25,18 @@ pnpm format:check     # prettier --check
 pnpm dev              # run the docs playground
 ```
 
+## Playground
+
+The docs playground is published at `https://<user>.github.io/chladni/`
+(see `pnpm dev` for the local version) — presets, a schema-generated
+tuning panel, and live "how it works" demos.
+
 Research notes (physics, the Figura parameter catalog this project is
-modelled on) live in [`docs/research`](docs/research).
+modelled on) live in [`docs/research`](docs/research):
+
+- [`figura-parameters.md`](docs/research/figura-parameters.md) — full parameter catalog
+- [`figura-behaviour.md`](docs/research/figura-behaviour.md) — engine behaviour rules
+- [`plate-physics.md`](docs/research/plate-physics.md) — plate/membrane physics reference
 
 ## License
 

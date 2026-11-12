@@ -134,6 +134,8 @@ uniform vec2 uFieldTexel;
 uniform float uTime;
 uniform float uEta;
 uniform float uAlpha;
+uniform float uSettle;
+uniform float uMaxStep;
 uniform float uTremor;
 in vec2 vUv;
 out vec4 outColor;
@@ -147,15 +149,18 @@ void main() {
   float gy = texture(uField, uv + vec2(0.0, uFieldTexel.y)).r -
              texture(uField, uv - vec2(0.0, uFieldTexel.y)).r;
   vec2 grad = vec2(gx, gy) / (4.0 * uFieldTexel); // per plate unit
-  float jit = uEta * a + 0.4 * uEta * uTremor;
-  vec2 seed = vUv * 913.7 + fract(uTime) * 7.13;
+  // grains at nodes stop entirely; elsewhere jitter + capped downhill drift
+  float hop = smoothstep(uSettle, uSettle * 3.0, a);
+  float jit = uEta * hop * (0.3 + a) + 0.4 * uEta * uTremor;
+  vec2 seed = vUv * 913.7 + gl_FragCoord.xy * 0.37 + fract(uTime) * 7.13;
   vec2 rnd = vec2(hash(seed), hash(seed + 1.7)) * 2.0 - 1.0;
-  vec2 np = pos + jit * rnd - uAlpha * grad * a;
-  if (texture(uField, np * 0.5 + 0.5).g < 0.5) {
-    vec2 s2 = vUv * 271.3 + fract(uTime * 1.7) * 3.1;
-    vec2 cand = vec2(hash(s2), hash(s2 + 5.3)) * 2.0 - 1.0;
-    np = texture(uField, cand * 0.5 + 0.5).g > 0.5 ? cand : pos;
-  }
+  float gl2 = length(grad);
+  vec2 drift = gl2 > 1e-6 ? uAlpha * hop * (grad / gl2) * min(1.0, gl2) : vec2(0.0);
+  vec2 np = pos + jit * rnd - drift;
+  vec2 d = np - pos;
+  float dl = length(d);
+  if (dl > uMaxStep) np = pos + d * (uMaxStep / dl);
+  if (texture(uField, np * 0.5 + 0.5).g < 0.5) np = pos; // reflect at the rim
   outColor = vec4(np, 0.0, 1.0);
 }`;
 

@@ -284,8 +284,10 @@ export class Renderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fb);
       gl.useProgram(this.updateProg);
       gl.uniform1f(this.loc(this.updateProg, "uTime"), f.time);
-      gl.uniform1f(this.loc(this.updateProg, "uEta"), 0.02);
-      gl.uniform1f(this.loc(this.updateProg, "uAlpha"), 0.05);
+      gl.uniform1f(this.loc(this.updateProg, "uEta"), 0.03);
+      gl.uniform1f(this.loc(this.updateProg, "uAlpha"), 0.012);
+      gl.uniform1f(this.loc(this.updateProg, "uSettle"), 0.05);
+      gl.uniform1f(this.loc(this.updateProg, "uMaxStep"), 0.02);
       gl.uniform1f(this.loc(this.updateProg, "uTremor"), f.tremor);
       gl.uniform2f(this.loc(this.updateProg, "uFieldTexel"), 1 / this.fieldRes, 1 / this.fieldRes);
       this.bindTex(0, src.tex, this.loc(this.updateProg, "uPos"));
