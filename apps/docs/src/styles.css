@@ -550,6 +550,33 @@ main > .sec-sub {
   margin-bottom: 10px;
 }
 
+.pcard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.pcard-head b {
+  font-size: 13px;
+}
+
+.pcard-head button {
+  padding: 4px 14px;
+  font-size: 12px;
+}
+
+.pstage {
+  margin-top: 12px;
+}
+
+.pstage canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  background: transparent;
+  display: block;
+}
+
 .pstatus {
   color: var(--muted);
   font-size: 12.5px;
@@ -567,10 +594,9 @@ main > .sec-sub {
   font-variant-numeric: tabular-nums;
 }
 
-.lvl-f {
-  width: 52px;
+.lvl-n {
+  width: 84px;
   color: var(--muted);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
   flex-shrink: 0;
 }
 

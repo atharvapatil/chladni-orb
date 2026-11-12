@@ -61,6 +61,24 @@ function diffParams(base: ChladniParams, cur: ChladniParams): DeepPartial<Chladn
 
 const simVoice = new SimulatedVoice();
 
+// live-level bands for the side card; Voice is the telephone speech band
+const LEVEL_BANDS = [
+  { key: "bass", label: "Bass", lo: 0, hi: 250, tip: "Under 250 Hz — kicks and low hum." },
+  { key: "lowmid", label: "Low mid", lo: 250, hi: 1000, tip: "250 Hz–1 kHz — body of the sound." },
+  { key: "highmid", label: "High mid", lo: 1000, hi: 4000, tip: "1–4 kHz — speech clarity." },
+  { key: "treble", label: "Treble", lo: 4000, hi: 1e9, tip: "Over 4 kHz — hats, hiss, sparkle." },
+  {
+    key: "voice",
+    label: "Voice",
+    lo: 300,
+    hi: 3400,
+    tip: "The telephone band — where speech sits.",
+  },
+] as const;
+
+let voiceBuf: Promise<AudioBuffer> | null = null;
+const loadVoice = () => (voiceBuf ??= renderVoiceBuffer());
+
 type Theme = "dark" | "light";
 
 // the plate reads as a page element: light theme uses dark grains on a light felt
@@ -94,7 +112,9 @@ export function App() {
   const [frozen, setFrozen] = useState(false);
   const [plateSize, setPlateSize] = useState(320);
   const [plateRadius, setPlateRadius] = useState(6);
-  const [parts, setParts] = useState<{ freq: number; amp: number }[]>([]);
+  const [levels, setLevels] = useState<Record<string, number>>({});
+  const [previewAnalyser, setPreviewAnalyser] = useState<AnalyserNode | null>(null);
+  const previewRef = useRef<{ ctx: AudioContext; src: AudioBufferSourceNode | null } | null>(null);
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("warming up");
   const plateRef = useRef<ChladniPlateHandle | null>(null);
@@ -144,7 +164,13 @@ export function App() {
       const p = plateRef.current;
       if (!p) return;
       const n = p.partials.length;
-      setParts(p.partials.slice(0, 8).map((x) => ({ freq: x.freq, amp: x.amp })));
+      const lv: Record<string, number> = {};
+      for (const b of LEVEL_BANDS) {
+        let m = 0;
+        for (const x of p.partials) if (x.freq >= b.lo && x.freq < b.hi && x.amp > m) m = x.amp;
+        lv[b.key] = m;
+      }
+      setLevels(lv);
       const list = p.partials
         .slice(0, 6)
         .map((x) => `${x.freq.toFixed(0)}`)
@@ -170,6 +196,34 @@ export function App() {
     audioElRef.current?.pause();
     setSource(null);
     setSourceName("none");
+  }, []);
+
+  const togglePreview = useCallback(async () => {
+    if (previewRef.current) {
+      previewRef.current.src?.stop();
+      void previewRef.current.ctx.close();
+      previewRef.current = null;
+      setPreviewAnalyser(null);
+      return;
+    }
+    const ctx = new AudioContext();
+    previewRef.current = { ctx, src: null };
+    const buffer = await loadVoice();
+    if (previewRef.current?.ctx !== ctx) {
+      void ctx.close();
+      return;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 8192;
+    analyser.smoothingTimeConstant = 0.5;
+    src.connect(analyser);
+    analyser.connect(ctx.destination);
+    src.start();
+    previewRef.current.src = src;
+    setPreviewAnalyser(analyser);
   }, []);
 
   const pickSim = useCallback(async () => {
@@ -560,21 +614,48 @@ export function App() {
           </div>
           <aside className="side">
             <div className="pcard">
-              <b>Status</b>
-              <p className="pstatus">{status}</p>
+              <div className="pcard-head">
+                <b>Preview</b>
+                <button
+                  className={previewAnalyser ? "primary" : ""}
+                  onClick={() => void togglePreview()}
+                >
+                  {previewAnalyser ? "Stop" : "▶ Play"}
+                </button>
+              </div>
+              <p className="pstatus">Mirrors the stage: palette, shape, state and voice.</p>
+              <div className="pstage">
+                <ChladniPlate params={patch} analyser={previewAnalyser} />
+              </div>
             </div>
             <div className="pcard">
-              <b>Live partials</b>
-              {parts.length === 0 && <p className="pstatus">listening…</p>}
-              {parts.map((x, i) => (
-                <div className="lvl" key={i}>
-                  <span className="lvl-f">{x.freq.toFixed(0)} Hz</span>
-                  <span className="lvl-bar">
-                    <i style={{ width: `${Math.min(100, x.amp * 100)}%` }} />
-                  </span>
-                  <span className="lvl-v">{x.amp.toFixed(2)}</span>
-                </div>
-              ))}
+              <b>
+                Live levels{" "}
+                <span className="tip" data-tip="Loudest partial in each band, right now.">
+                  ⓘ
+                </span>
+              </b>
+              {LEVEL_BANDS.map((b) => {
+                const v = levels[b.key] ?? 0;
+                return (
+                  <div className="lvl" key={b.key}>
+                    <span className="lvl-n">
+                      {b.label}{" "}
+                      <span className="tip" data-tip={b.tip}>
+                        ⓘ
+                      </span>
+                    </span>
+                    <span className="lvl-bar">
+                      <i style={{ width: `${Math.min(100, v * 100)}%` }} />
+                    </span>
+                    <span className="lvl-v">{v.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="pcard">
+              <b>Status</b>
+              <p className="pstatus">{status}</p>
             </div>
           </aside>
         </div>
