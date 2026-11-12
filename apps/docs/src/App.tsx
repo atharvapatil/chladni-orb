@@ -283,262 +283,348 @@ export function App() {
 
   const demos = [
     {
+      title: "The field",
       p: { look: { look: "ink" } },
       cap: "Standing-wave field drawn in ink — this is what the sand feels.",
     },
-    { p: {}, cap: "The same field with sand: grains hop off antinodes and settle on the nodes." },
     {
+      title: "The sand",
+      p: {},
+      cap: "The same field with sand: grains hop off antinodes and settle on the nodes.",
+    },
+    {
+      title: "No exciter",
       p: { plate: { exciterAmount: 0 } },
       cap: "Exciter at 0 — the whole plate is pushed evenly, so only ring modes answer.",
     },
     {
+      title: "Morph",
       p: { look: { multiTone: "morph" } },
       cap: "Morph — partials interfere, so the figure wanders instead of holding still.",
     },
   ] as const;
 
   return (
-    <main>
-      <button
-        className="themetoggle"
-        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-        onClick={toggleTheme}
-      >
-        {theme === "dark" ? "☀ Light" : "☾ Dark"}
-      </button>
-      <h1>chladni</h1>
-      <p className="tagline">
-        A voice-reactive Chladni plate for the web — sound in, sand figures out.
-      </p>
-
-      <section
-        className="hero"
-        style={
-          {
-            "--plate-size": `${plateSize}px`,
-            "--plate-radius": params.plate.shape === "circle" ? "9999px" : `${plateRadius}px`,
-          } as CSSProperties
-        }
-      >
-        <ChladniPlate
-          params={patch}
-          analyser={source}
-          frozen={frozen}
-          onReady={(p) => {
-            plateRef.current = p;
-          }}
-        />
-        <label className="sizebar">
-          Size
-          <input
-            type="range"
-            min={128}
-            max={320}
-            step={1}
-            value={plateSize}
-            onChange={(e) => setPlateSize(Number(e.target.value))}
-          />
-          {plateSize} px
-        </label>
-        <div className="customize">
-          <span className="seg">
-            {(["circle", "square"] as const).map((s) => (
-              <button
-                key={s}
-                className={params.plate.shape === s ? "active" : ""}
-                onClick={() => applyPatch({ plate: { shape: s } })}
-              >
-                {s}
-              </button>
-            ))}
-          </span>
-          {params.plate.shape === "square" && (
-            <label className="radius">
-              Radius
-              <input
-                type="range"
-                min={0}
-                max={32}
-                step={1}
-                value={plateRadius}
-                onChange={(e) => setPlateRadius(Number(e.target.value))}
-              />
-              {plateRadius}
-            </label>
-          )}
-          <label>
-            Plate
-            <input
-              type="color"
-              value={params.look.plateColor}
-              onChange={(e) => applyPatch({ look: { plateColor: e.target.value } })}
-            />
-          </label>
-          <label>
-            Sand
-            <input
-              type="color"
-              value={params.look.color}
-              onChange={(e) => applyPatch({ look: { color: e.target.value } })}
-            />
-          </label>
-          <label>
-            Page
-            <input
-              type="color"
-              value={pageBg || THEME_BG[theme]}
-              onChange={(e) => setPageBg(e.target.value)}
-            />
-          </label>
-          {pageBg && (
-            <button onClick={() => setPageBg("")} title="Back to theme background">
-              reset
-            </button>
-          )}
+    <>
+      <header className="nav">
+        <a className="brand" href="#top">
+          chladni
+        </a>
+        <nav>
+          <a href="#tune">Tune</a>
+          <a href="#inside">How it works</a>
+          <a href="#presets">Presets</a>
+          <a href="#use">Use it</a>
+        </nav>
+        <div className="nav-right">
+          <a href="https://github.com/<user>/chladni">GitHub</a>
+          <button
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? "☀ Light" : "☾ Dark"}
+          </button>
         </div>
-        <div className="sourcebar">
-          <button
-            className={sourceName === "sample" ? "active" : ""}
-            onClick={() => void pickSample()}
-          >
-            Sample
-          </button>
-          <button
-            className={sourceName === "microphone" ? "active" : ""}
-            onClick={() => void pickMic()}
-          >
-            Microphone
-          </button>
-          <button
-            className={sourceName.startsWith("file") ? "active" : ""}
-            onClick={() => fileRef.current?.click()}
-          >
-            Your file
-          </button>
-          <button className={sourceName === "simulated voice" ? "active" : ""} onClick={pickSim}>
-            Simulated voice
-          </button>
-          <button className={sourceName === "sine 440 Hz" ? "active" : ""} onClick={pickSine}>
-            Sine 440
-          </button>
-          <button onClick={() => plateRef.current?.resetSand()}>Reset sand</button>
-          <button className={frozen ? "active" : ""} onClick={() => setFrozen((f) => !f)}>
-            {frozen ? "Unfreeze" : "Freeze"}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="audio/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void pickFile(f);
-            }}
-          />
-        </div>
-        <div className="status">{status}</div>
-      </section>
+      </header>
 
-      <h2 id="presets">Presets</h2>
-      <div className="presets">
-        {Object.entries(PRESETS).map(([key, p]) => (
-          <button key={key} className="preset-card" onClick={() => applyPreset(key)}>
-            <b>{p.label}</b>
-            <span>{p.description}</span>
-          </button>
-        ))}
-      </div>
-
-      <h2 id="tune">Tune</h2>
-      <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
-        <button
-          onClick={() => {
-            setParams(DEFAULT_PARAMS);
-            setPatch({});
-            plateRef.current?.resetSand();
-          }}
+      <main id="top">
+        <section
+          className="hero"
+          style={
+            {
+              "--plate-size": `${plateSize}px`,
+              "--plate-radius": params.plate.shape === "circle" ? "9999px" : `${plateRadius}px`,
+            } as CSSProperties
+          }
         >
-          Reset
-        </button>
-        <button onClick={() => void copySettings()}>{copied ? "Copied" : "Copy settings"}</button>
-      </div>
-      <div className="tune">
-        {groups.map(([g, entries]) => (
-          <fieldset key={g}>
-            <legend>{GROUP_LABEL[g] ?? g}</legend>
-            {entries.map(([path, entry]) => (
-              <Control
-                key={path}
-                entry={entry}
-                value={getPath(params, path)}
-                onChange={(v) => {
-                  const p: DeepPartial<ChladniParams> = {};
-                  setPath(p, path, v);
-                  applyPatch(p);
-                }}
-              />
-            ))}
-          </fieldset>
-        ))}
-      </div>
-
-      <h2 id="how">How it works</h2>
-      <div className="how">
-        {demos.map((d, i) => (
-          <figure key={i}>
+          <div className="hero-copy">
+            <h1>chladni</h1>
+            <p className="tagline">
+              A voice-reactive Chladni plate for the web — sound in, sand figures out. Play any
+              voice through it, tune the look, take the code. Open source, MIT licensed.
+            </p>
+            <div className="hero-actions">
+              <a className="btn primary" href="https://github.com/<user>/chladni">
+                Get the code
+              </a>
+              <a className="btn" href="#inside">
+                How it works
+              </a>
+            </div>
+            <p className="credit">Open source · MIT</p>
+          </div>
+          <div className="hero-stage">
             <ChladniPlate
-              params={
-                {
-                  ...d.p,
-                  look: { ...THEME_LOOK[theme].look, ...(d.p as { look?: object }).look },
-                } as DeepPartial<ChladniParams>
-              }
-              analyser={simVoice}
+              params={patch}
+              analyser={source}
+              frozen={frozen}
+              onReady={(p) => {
+                plateRef.current = p;
+              }}
             />
-            <figcaption>{d.cap}</figcaption>
-          </figure>
-        ))}
-      </div>
-      <p className="pipeline">
-        <b>Audio → FFT → partials → modes → resonance → sand.</b> An analyser node measures the
-        spectrum; the strongest peaks become <b>partials</b>. Each partial shakes the plate's
-        vibration modes through a Lorentzian resonance — on a resonance the figure is clean, between
-        two it blends, far from all it trembles. The driven displacement field is drawn as a
-        standing wave; thousands of grains jitter in proportion to local vibration and drift down
-        its gradient until only the nodal lines hold sand.
-      </p>
+            <p className="stage-cap">
+              {params.look.look} · {params.plate.shape}
+              {params.plate.aspect !== 1 ? ` ×${params.plate.aspect}` : ""}
+            </p>
+          </div>
+        </section>
 
-      <h2 id="use">Use it</h2>
-      <div className="useit">
-        <h3>Install</h3>
-        <pre>
-          <code>pnpm add @chladni/react{"\n"}# or the engine alone: pnpm add @chladni/core</code>
-        </pre>
-        <h3>React</h3>
-        <pre>
-          <code>{`import { ChladniPlate, SimulatedVoice } from "@chladni/react";
+        <div className="deck">
+          <label className="sizebar">
+            Size
+            <input
+              type="range"
+              min={128}
+              max={320}
+              step={1}
+              value={plateSize}
+              onChange={(e) => setPlateSize(Number(e.target.value))}
+            />
+            {plateSize} px
+          </label>
+          <div className="customize">
+            <span className="seg">
+              {(["circle", "square"] as const).map((s) => (
+                <button
+                  key={s}
+                  className={params.plate.shape === s ? "active" : ""}
+                  onClick={() => applyPatch({ plate: { shape: s } })}
+                >
+                  {s}
+                </button>
+              ))}
+            </span>
+            {params.plate.shape === "square" && (
+              <label className="radius">
+                Radius
+                <input
+                  type="range"
+                  min={0}
+                  max={32}
+                  step={1}
+                  value={plateRadius}
+                  onChange={(e) => setPlateRadius(Number(e.target.value))}
+                />
+                {plateRadius}
+              </label>
+            )}
+            <label>
+              Plate
+              <input
+                type="color"
+                value={params.look.plateColor}
+                onChange={(e) => applyPatch({ look: { plateColor: e.target.value } })}
+              />
+            </label>
+            <label>
+              Sand
+              <input
+                type="color"
+                value={params.look.color}
+                onChange={(e) => applyPatch({ look: { color: e.target.value } })}
+              />
+            </label>
+            <label>
+              Page
+              <input
+                type="color"
+                value={pageBg || THEME_BG[theme]}
+                onChange={(e) => setPageBg(e.target.value)}
+              />
+            </label>
+            {pageBg && (
+              <button onClick={() => setPageBg("")} title="Back to theme background">
+                reset
+              </button>
+            )}
+          </div>
+          <div className="sourcebar">
+            <button
+              className={sourceName === "sample" ? "active" : ""}
+              onClick={() => void pickSample()}
+            >
+              Sample
+            </button>
+            <button
+              className={sourceName === "microphone" ? "active" : ""}
+              onClick={() => void pickMic()}
+            >
+              Microphone
+            </button>
+            <button
+              className={sourceName.startsWith("file") ? "active" : ""}
+              onClick={() => fileRef.current?.click()}
+            >
+              Your file
+            </button>
+            <button className={sourceName === "simulated voice" ? "active" : ""} onClick={pickSim}>
+              Simulated voice
+            </button>
+            <button className={sourceName === "sine 440 Hz" ? "active" : ""} onClick={pickSine}>
+              Sine 440
+            </button>
+            <button onClick={() => plateRef.current?.resetSand()}>Reset sand</button>
+            <button className={frozen ? "active" : ""} onClick={() => setFrozen((f) => !f)}>
+              {frozen ? "Unfreeze" : "Freeze"}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="audio/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void pickFile(f);
+              }}
+            />
+          </div>
+          <div className="status">{status}</div>
+        </div>
+
+        <h2 id="tune" className="sec">
+          <span className="num">01</span>Tune
+        </h2>
+        <p className="sec-sub">
+          Every slider changes the plate live. Hover the ⓘ for what each does — copy the settings to
+          share a look.
+        </p>
+        <div className="tune-actions">
+          <button
+            onClick={() => {
+              setParams(DEFAULT_PARAMS);
+              setPatch({});
+              plateRef.current?.resetSand();
+            }}
+          >
+            Reset
+          </button>
+          <button onClick={() => void copySettings()}>{copied ? "Copied" : "Copy settings"}</button>
+        </div>
+        <div className="tune">
+          {groups.map(([g, entries]) => (
+            <fieldset key={g}>
+              <legend>{GROUP_LABEL[g] ?? g}</legend>
+              {entries.map(([path, entry]) => (
+                <Control
+                  key={path}
+                  entry={entry}
+                  value={getPath(params, path)}
+                  onChange={(v) => {
+                    const p: DeepPartial<ChladniParams> = {};
+                    setPath(p, path, v);
+                    applyPatch(p);
+                  }}
+                />
+              ))}
+            </fieldset>
+          ))}
+        </div>
+
+        <h2 id="inside" className="sec">
+          <span className="num">02</span>How the plate is built
+        </h2>
+        <p className="sec-sub">Four views, each one live with the same simulated voice.</p>
+        <div className="how">
+          {demos.map((d, i) => (
+            <figure key={i}>
+              <span className="stepnum">{i + 1}</span>
+              <ChladniPlate
+                params={
+                  {
+                    ...d.p,
+                    look: { ...THEME_LOOK[theme].look, ...(d.p as { look?: object }).look },
+                  } as DeepPartial<ChladniParams>
+                }
+                analyser={simVoice}
+              />
+              <figcaption>
+                <b>{d.title}</b>
+                {d.cap}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+        <p className="pipeline">
+          <b>Audio → FFT → partials → modes → resonance → sand.</b> An analyser node measures the
+          spectrum; the strongest peaks become <b>partials</b>. Each partial shakes the plate's
+          vibration modes through a Lorentzian resonance — on a resonance the figure is clean,
+          between two it blends, far from all it trembles. The driven displacement field is drawn as
+          a standing wave; thousands of grains jitter in proportion to local vibration and drift
+          down its gradient until only the nodal lines hold sand.
+        </p>
+
+        <h2 id="presets" className="sec">
+          <span className="num">03</span>Presets
+        </h2>
+        <p className="sec-sub">Starter scenes — pick one, then make it yours in Tune.</p>
+        <div className="presets">
+          {Object.entries(PRESETS).map(([key, p]) => (
+            <button key={key} className="preset-card" onClick={() => applyPreset(key)}>
+              <b>{p.label}</b>
+              <span>{p.description}</span>
+              <span className="swatches">
+                <i style={{ background: p.params.look?.plateColor ?? "#1a1a1c" }} />
+                <i style={{ background: p.params.look?.color ?? "#f3ead8" }} />
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <h2 id="use" className="sec">
+          <span className="num">04</span>Use it in your project
+        </h2>
+        <p className="sec-sub">
+          A React component over a plain-TypeScript engine — install and give it any AnalyserNode.
+        </p>
+        <div className="useit">
+          <div className="step">
+            <span className="stepnum">1</span>
+            <div>
+              <h3>Install</h3>
+              <pre>
+                <code>
+                  pnpm add @chladni/react{"\n"}# or the engine alone: pnpm add @chladni/core
+                </code>
+              </pre>
+            </div>
+          </div>
+          <div className="step">
+            <span className="stepnum">2</span>
+            <div>
+              <h3>React</h3>
+              <pre>
+                <code>{`import { ChladniPlate, SimulatedVoice } from "@chladni/react";
 
 <ChladniPlate
   params={{ plate: { shape: "circle" } }}
   analyser={new SimulatedVoice()}
 />`}</code>
-        </pre>
-        <h3>Vanilla</h3>
-        <pre>
-          <code>{`import { createChladniPlate, SimulatedVoice } from "@chladni/core";
+              </pre>
+            </div>
+          </div>
+          <div className="step">
+            <span className="stepnum">3</span>
+            <div>
+              <h3>Vanilla</h3>
+              <pre>
+                <code>{`import { createChladniPlate, SimulatedVoice } from "@chladni/core";
 
 const plate = createChladniPlate(document.querySelector("canvas"));
 plate.setAnalyser(new SimulatedVoice());`}</code>
-        </pre>
+              </pre>
+            </div>
+          </div>
+        </div>
         <p className="pipeline">
           Research notes (Figura parameter catalog, behaviour rules, plate physics):{" "}
-          <a href="https://github.com/" style={{ color: "var(--accent)" }}>
+          <a href="https://github.com/<user>/chladni" style={{ color: "var(--accent)" }}>
             docs/research
           </a>{" "}
           in the repository.
         </p>
-      </div>
-    </main>
+      </main>
+      <footer>Built with @chladni/core · Open source · MIT</footer>
+    </>
   );
 }
 

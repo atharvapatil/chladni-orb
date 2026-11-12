@@ -25,6 +25,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -39,32 +43,145 @@ body {
 main {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 32px 20px 80px;
+  padding: 48px 20px 80px;
 }
 
 h1 {
-  font-size: 28px;
-  letter-spacing: 0.02em;
-  margin: 0 0 4px;
+  font-size: 40px;
+  letter-spacing: -0.02em;
+  margin: 0 0 12px;
 }
 
 h2 {
-  font-size: 18px;
-  margin: 48px 0 12px;
-  border-bottom: 1px solid var(--edge);
-  padding-bottom: 6px;
+  font-size: 20px;
+  margin: 0;
 }
 
 .tagline {
   color: var(--muted);
-  margin: 0 0 24px;
+  font-size: 16px;
+  line-height: 1.55;
+  max-width: 46ch;
+  margin: 0 0 22px;
 }
 
+/* ---------- top nav ---------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--edge);
+}
+
+.nav .brand {
+  font-weight: 650;
+  font-size: 15px;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.nav nav {
+  display: flex;
+  gap: 16px;
+  margin-left: 12px;
+}
+
+.nav nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.nav nav a:hover {
+  color: var(--text);
+}
+
+.nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-right a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.nav-right button {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+
+/* ---------- hero ---------- */
+
 .hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 48px;
+  align-items: center;
+  padding: 40px 0 32px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--active-fg);
+  border-color: var(--accent);
+}
+
+.credit {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+.hero-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage-cap {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- control deck ---------- */
+
+.deck {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 18px 20px;
+  margin-bottom: 8px;
 }
 
 .hero canvas {
@@ -160,11 +277,36 @@ button.active {
   border-color: var(--accent);
 }
 
-.themetoggle {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
+/* ---------- numbered sections ---------- */
+
+h2.sec {
+  font-size: 20px;
+  margin: 56px 0 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 1px solid var(--edge);
+  padding-bottom: 8px;
+}
+
+.num {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+.sec-sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin: 0 0 16px;
+}
+
+.tune-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .sourcebar {
@@ -203,6 +345,20 @@ button.active {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.35;
+  display: block;
+}
+
+.preset-card .swatches {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.preset-card .swatches i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--edge);
   display: block;
 }
 
@@ -271,6 +427,21 @@ button.active {
 
 .how figure {
   margin: 0;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 12px;
+  position: relative;
+}
+
+.how figure .stepnum {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 1;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--accent);
 }
 
 .how canvas {
@@ -282,8 +453,15 @@ button.active {
 .how figcaption {
   font-size: 12px;
   color: var(--muted);
-  margin-top: 6px;
-  line-height: 1.4;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.how figcaption b {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 2px;
 }
 
 .pipeline {
@@ -311,9 +489,57 @@ code {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
+.useit .step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 16px 0;
+}
+
+.useit .step > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepnum {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  color: var(--accent);
+  border: 1px solid var(--edge);
+  border-radius: 9999px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 .useit h3 {
   font-size: 14px;
-  margin: 18px 0 6px;
+  margin: 0 0 8px;
+}
+
+footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 40px;
+  border-top: 1px solid var(--edge);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding-top: 16px;
+  }
+
+  .nav nav {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
