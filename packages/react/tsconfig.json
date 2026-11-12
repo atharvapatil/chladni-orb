@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "paths": {
+      "@chladni/core": ["../core/src/index.ts"]
+    }
   },
   "include": ["src", "tsup.config.ts"]
 }

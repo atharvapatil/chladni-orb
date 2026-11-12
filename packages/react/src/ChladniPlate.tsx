@@ -1,0 +1,107 @@
+import {
+  createChladniPlate,
+  type ChladniParams,
+  type ChladniPlate as CorePlate,
+  type DeepPartial,
+  type SpectrumSource,
+} from "@chladni/core";
+import {
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+  type CanvasHTMLAttributes,
+  type RefObject,
+} from "react";
+
+export interface ChladniPlateProps extends Omit<
+  CanvasHTMLAttributes<HTMLCanvasElement>,
+  "children"
+> {
+  /** merged over DEFAULT_PARAMS; deep-compared via JSON to avoid churn */
+  params?: DeepPartial<ChladniParams>;
+  analyser?: SpectrumSource | AnalyserNode | null;
+  frozen?: boolean;
+  pixelRatio?: number;
+  fieldResolution?: number;
+  particleTexSize?: number;
+  onReady?: ((plate: CorePlate) => void) | undefined;
+}
+
+export const ChladniPlate = forwardRef<CorePlate | null, ChladniPlateProps>(
+  function ChladniPlate(props, ref) {
+    const {
+      params,
+      analyser,
+      frozen,
+      pixelRatio,
+      fieldResolution,
+      particleTexSize,
+      onReady,
+      ...canvasProps
+    } = props;
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const plateRef = useRef<CorePlate | null>(null);
+    const onReadyRef = useRef(onReady);
+    onReadyRef.current = onReady;
+    const paramsJson = JSON.stringify(params ?? null);
+
+    // create once per canvas mount (StrictMode-safe: ref cleared on cleanup)
+    useEffect(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const plate = createChladniPlate(canvas, {
+        ...(analyser !== undefined ? { analyser } : {}),
+        ...(pixelRatio !== undefined ? { pixelRatio } : {}),
+        ...(fieldResolution !== undefined ? { fieldResolution } : {}),
+        ...(particleTexSize !== undefined ? { particleTexSize } : {}),
+      });
+      plateRef.current = plate;
+      if (typeof ref === "function") ref(plate);
+      else if (ref) ref.current = plate;
+      onReadyRef.current?.(plate);
+      return () => {
+        plateRef.current = null;
+        if (typeof ref === "function") ref(null);
+        else if (ref) ref.current = null;
+        plate.destroy();
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+      if (paramsJson !== "null") {
+        plateRef.current?.setParams(JSON.parse(paramsJson));
+      }
+    }, [paramsJson]);
+
+    useEffect(() => {
+      if (analyser !== undefined) plateRef.current?.setAnalyser(analyser);
+    }, [analyser]);
+
+    useEffect(() => {
+      if (frozen !== undefined) plateRef.current?.freeze(frozen);
+    }, [frozen]);
+
+    return <canvas ref={canvasRef} {...canvasProps} />;
+  },
+);
+
+export function useChladniPlate(): {
+  ref: RefObject<HTMLCanvasElement | null>;
+  plate: CorePlate | null;
+} {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [plate, setPlate] = useState<CorePlate | null>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const p = createChladniPlate(canvas);
+    setPlate(p);
+    return () => {
+      setPlate(null);
+      p.destroy();
+    };
+  }, []);
+  return { ref, plate };
+}

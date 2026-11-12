@@ -23,3 +23,4 @@ export {
 } from "./audio/sources";
 export { Renderer, type RenderFrame } from "./render/Renderer";
 export { getSharedGL } from "./render/context";
+export { PRESETS, type Preset } from "./presets";

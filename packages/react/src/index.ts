@@ -1,1 +1,25 @@
-export {};
+export { ChladniPlate, useChladniPlate, type ChladniPlateProps } from "./ChladniPlate";
+export {
+  DEFAULT_PARAMS,
+  PARAM_SCHEMA,
+  PRESETS,
+  SimulatedVoice,
+  createElementAnalyser,
+  createMicAnalyser,
+  mergeParams,
+  type AnalyserHandle,
+  type ChladniParams,
+  type ChladniPlate as ChladniPlateHandle,
+  type ChladniPlateOptions,
+  type DeepPartial,
+  type Halo,
+  type Look,
+  type MultiTone,
+  type ParamSchemaEntry,
+  type PlateDrive,
+  type PlateModelKind,
+  type PlateShape,
+  type Preset,
+  type SpectralPartial,
+  type SpectrumSource,
+} from "@chladni/core";
