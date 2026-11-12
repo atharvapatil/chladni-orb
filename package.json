@@ -1,0 +1,24 @@
+{
+  "name": "chladni-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "oxlint",
+    "dev": "pnpm --filter docs dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "changeset": "changeset",
+    "release": "pnpm -r build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "oxlint": "1.90.0",
+    "prettier": "3.9.9",
+    "typescript": "5.9.3"
+  },
+  "packageManager": "pnpm@12.2.0"
+}
