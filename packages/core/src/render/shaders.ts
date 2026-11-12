@@ -20,7 +20,7 @@ vec2 rot(vec2 p, float a) {
   float c = cos(a), s = sin(a);
   return vec2(c * p.x - s * p.y, s * p.x + c * p.y);
 }
-// shape: 0 circle, 1 square, 2 rectangle, 3 hexagon, 4 triangle
+// shape: 0 circle, 1 square, 2 rectangle (square with aspect ≠ 1)
 float shapeMask(int shape, vec2 p, float aspect) {
   float d;
   if (shape == 0) {

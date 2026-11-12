@@ -241,8 +241,8 @@ export class LabModel implements PlateModel {
           },
         }))
         .filter((m) => m.freq <= this.maxHz);
-      // degenerate pairs: consecutive eigenvalues within 0.2% (non-rectangle)
-      const canPair = plate.shape !== "rectangle";
+      // degenerate pairs: consecutive eigenvalues within 0.2% (equal sides only)
+      const canPair = plate.aspect === 1;
       for (let i = 0; i < raws.length; i++) {
         const m = raws[i]!;
         const nx = raws[i + 1];

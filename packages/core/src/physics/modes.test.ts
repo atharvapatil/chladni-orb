@@ -35,7 +35,7 @@ describe("rect modes", () => {
 
   it("rectangle enumerates ordered pairs with sign 0 (pure products)", () => {
     const model = new AnalyticalModel();
-    const params = mergeParams(DEFAULT_PARAMS, { plate: { shape: "rectangle", aspect: 2 } });
+    const params = mergeParams(DEFAULT_PARAMS, { plate: { shape: "square", aspect: 2 } });
     const modes = model.modes(params);
     expect(modes.every((m) => m.basis === "rect" && m.sign === 0)).toBe(true);
     const has12 = modes.some((m) => m.n === 1 && m.m === 2);

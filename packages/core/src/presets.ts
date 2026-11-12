@@ -31,11 +31,11 @@ export const PRESETS: Record<string, Preset> = {
       look: { look: "classic" },
     },
   },
-  "ink-hexagon": {
-    label: "Ink hexagon",
-    description: "Nodal lines only, drawn in ink on a hexagonal plate.",
+  "ink-square": {
+    label: "Ink square",
+    description: "Nodal lines only, drawn in ink on a square plate.",
     params: {
-      plate: { shape: "hexagon" },
+      plate: { shape: "square" },
       look: { look: "ink" },
       ink: { width: 0.35, intensity: 1.2, glow: 0.4 },
     },
@@ -44,7 +44,7 @@ export const PRESETS: Record<string, Preset> = {
     label: "Brass rectangle",
     description: "Heavy brass plate cut along its edge — pure product modes.",
     params: {
-      plate: { shape: "rectangle", aspect: 1.5, density: 8500 },
+      plate: { shape: "square", aspect: 1.5, density: 8500 },
       studio: { elasticity: 100 },
       look: { look: "classic", color: "#d9b25f" },
     },

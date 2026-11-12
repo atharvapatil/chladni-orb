@@ -24,7 +24,7 @@ plate.setAnalyser(new SimulatedVoice()); // built-in demo source
 const mic = await createMicAnalyser(); // or the real thing
 plate.setAnalyser(mic.analyser);
 
-plate.setParams({ plate: { shape: "hexagon" }, look: { look: "ink" } });
+plate.setParams({ plate: { shape: "square" }, look: { look: "ink" } });
 plate.freeze(true);
 plate.resetSand();
 plate.destroy();
@@ -41,7 +41,7 @@ state. The groups: `listening` (input/floor/decay/partials/freeze),
 for the full catalog.
 
 Ready-made figures ship as `PRESETS` (`voice`, `classic-square-pivot`,
-`ink-hexagon`, `brass-rectangle`, `drumhead`, `lab-aluminium`):
+`ink-square`, `brass-rectangle`, `drumhead`, `lab-aluminium`):
 
 ```ts
 import { PRESETS } from "@chladni/core";

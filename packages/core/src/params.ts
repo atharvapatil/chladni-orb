@@ -1,4 +1,4 @@
-export type PlateShape = "circle" | "square" | "rectangle" | "hexagon" | "triangle";
+export type PlateShape = "circle" | "square";
 export type PlateDrive = "exciter" | "pivot";
 export type PlateModelKind = "studio" | "lab";
 export type Look = "textured" | "classic" | "ink";
@@ -23,7 +23,7 @@ export interface ChladniParams {
     drive: PlateDrive;
     /** cm, 5..100 (diameter / side). */
     size: number;
-    /** Rectangle width/height ratio, 0.5..2. Ignored for other shapes. */
+    /** Square width/height ratio, 0.5..2 — ≠1 makes a rectangle. */
     aspect: number;
     /** kg/m³, 400..12000. */
     density: number;
@@ -91,7 +91,7 @@ export const DEFAULT_PARAMS: ChladniParams = {
     shape: "circle",
     drive: "exciter",
     size: 30,
-    aspect: 1.5,
+    aspect: 1,
     density: 2700,
     exciterAmount: 0.7,
     exciterX: 0,
@@ -183,8 +183,8 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
   "plate.shape": {
     label: "Shape",
     kind: "enum",
-    options: ["circle", "square", "rectangle", "hexagon", "triangle"],
-    help: "Plate outline. Non-circle/square shapes fill the frame and are cut along their edge.",
+    options: ["circle", "square"],
+    help: "Plate outline. A square with aspect ≠ 1 is a rectangle.",
   },
   "plate.drive": {
     label: "Drive",

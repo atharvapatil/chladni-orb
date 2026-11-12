@@ -229,7 +229,7 @@ export function solveRitz(
 export function solveRect(params: ChladniParams, nBasis = N): RitzResult {
   const { plate, lab } = params;
   const a = plate.size / 100; // m
-  const b = plate.shape === "rectangle" ? a / plate.aspect : a;
+  const b = plate.aspect !== 1 ? a / plate.aspect : a;
   const h = lab.thickness / 1000; // mm → m
   const E = lab.elasticity * 1e9;
   const nu = lab.poisson;

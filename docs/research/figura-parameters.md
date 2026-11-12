@@ -155,7 +155,8 @@ defaults marked `†` are our proposals — the manual does not state factory
 values. `lab` group is Phase 5 scope.
 
 ```ts
-export type PlateShape = "circle" | "square" | "rectangle" | "hexagon" | "triangle";
+// ours: circle + square only (aspect ≠ 1 gives a rectangle)
+export type PlateShape = "circle" | "square";
 export type PlateDrive = "exciter" | "pivot";
 export type PlateModelKind = "studio" | "lab";
 export type Look = "textured" | "classic" | "ink";

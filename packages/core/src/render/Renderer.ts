@@ -38,13 +38,7 @@ export interface RenderFrame {
 const BESSEL_N = 13;
 const BESSEL_X = 1024;
 const BESSEL_DOMAIN = 40;
-const SHAPE_INDEX: Record<ChladniParams["plate"]["shape"], number> = {
-  circle: 0,
-  square: 1,
-  rectangle: 2,
-  hexagon: 3,
-  triangle: 4,
-};
+// shader mask indices: 0 circle, 1 square, 2 rectangle (square, aspect ≠ 1)
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
   const s = gl.createShader(type)!;
@@ -267,8 +261,8 @@ export class Renderer {
       this.modeB[i * 4 + 2] = m.freq;
       this.modeB[i * 4 + 3] = m.pair;
     }
-    const aspect = p.plate.shape === "rectangle" ? p.plate.aspect : 1;
-    const shapeIdx = SHAPE_INDEX[p.plate.shape];
+    const aspect = p.plate.aspect;
+    const shapeIdx = p.plate.shape === "circle" ? 0 : p.plate.aspect !== 1 ? 2 : 1;
     const morph = p.look.multiTone === "morph" ? 1 : 0;
 
     // upload the atlas when the lab solver publishes a new version

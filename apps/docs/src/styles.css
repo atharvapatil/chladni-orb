@@ -73,6 +73,7 @@ h2 {
   max-width: 80vw;
   max-height: 80vw;
   background: transparent;
+  border-radius: var(--plate-radius, 0);
 }
 
 .sizebar {
@@ -115,6 +116,19 @@ h2 {
 .customize button {
   padding: 2px 8px;
   font-size: 12px;
+}
+
+.customize .seg {
+  margin-top: 0;
+}
+
+.customize .radius {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.customize .radius input[type="range"] {
+  width: 90px;
 }
 
 .status {

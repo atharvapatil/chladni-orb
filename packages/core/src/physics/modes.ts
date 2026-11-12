@@ -143,13 +143,12 @@ export class AnalyticalModel implements PlateModel {
         }
       }
     } else {
-      // square, hexagon, triangle share the ± superposition families
-      // (equal Lx, Ly so the swapped products share k); a rectangle with
-      // Lx ≠ Ly enumerates every ordered pair as a pure product (sign 0),
-      // which is clipped to the rectangle outline at render time.
+      // squares share the ± superposition families (equal Lx, Ly so the
+      // swapped products share k); a square with aspect ≠ 1 is a rectangle
+      // and enumerates every ordered pair as a pure product (sign 0).
       const Lx = sizeM;
-      const Ly = plate.shape === "rectangle" ? sizeM / plate.aspect : sizeM;
-      if (plate.shape === "rectangle") {
+      const Ly = plate.aspect !== 1 ? sizeM / plate.aspect : sizeM;
+      if (plate.aspect !== 1) {
         for (let n = 0; n <= this.maxIndex; n++) {
           for (let m = 0; m <= this.maxIndex; m++) {
             if (n === 0 && m === 0) continue;

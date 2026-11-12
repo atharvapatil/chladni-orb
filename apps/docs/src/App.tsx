@@ -86,6 +86,7 @@ export function App() {
   const [sourceName, setSourceName] = useState("none");
   const [frozen, setFrozen] = useState(false);
   const [plateSize, setPlateSize] = useState(320);
+  const [plateRadius, setPlateRadius] = useState(6);
   const [pageBg, setPageBg] = useState(() => localStorage.getItem("chladni-bg") ?? "");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("warming up");
@@ -310,7 +311,15 @@ export function App() {
         A voice-reactive Chladni plate for the web — sound in, sand figures out.
       </p>
 
-      <section className="hero" style={{ "--plate-size": `${plateSize}px` } as CSSProperties}>
+      <section
+        className="hero"
+        style={
+          {
+            "--plate-size": `${plateSize}px`,
+            "--plate-radius": params.plate.shape === "circle" ? "9999px" : `${plateRadius}px`,
+          } as CSSProperties
+        }
+      >
         <ChladniPlate
           params={patch}
           analyser={source}
@@ -332,6 +341,31 @@ export function App() {
           {plateSize} px
         </label>
         <div className="customize">
+          <span className="seg">
+            {(["circle", "square"] as const).map((s) => (
+              <button
+                key={s}
+                className={params.plate.shape === s ? "active" : ""}
+                onClick={() => applyPatch({ plate: { shape: s } })}
+              >
+                {s}
+              </button>
+            ))}
+          </span>
+          {params.plate.shape === "square" && (
+            <label className="radius">
+              Radius
+              <input
+                type="range"
+                min={0}
+                max={32}
+                step={1}
+                value={plateRadius}
+                onChange={(e) => setPlateRadius(Number(e.target.value))}
+              />
+              {plateRadius}
+            </label>
+          )}
           <label>
             Plate
             <input
