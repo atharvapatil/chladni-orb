@@ -43,6 +43,6 @@ pnpm release          # build + changeset publish
 
 ## Phase status
 
-Phase 0/1 scaffold + research docs. Core engine modules
-(`packages/core/src/{audio,physics,render}/`) are empty placeholders —
-see the plan for Phase 2 scope before implementing.
+Phase 2 done: @chladni/core has params, audio (PartialAnalyser, sources,
+SimulatedVoice), physics (AnalyticalModel, ResonanceMixer), WebGL2 render and
+the createChladniPlate API. Next: @chladni/react wrapper and the docs playground.

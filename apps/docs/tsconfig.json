@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@chladni/core": ["../../packages/core/src/index.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }
