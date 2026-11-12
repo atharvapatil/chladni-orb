@@ -1,4 +1,4 @@
-export type PlateShape = "circle" | "square";
+export type PlateShape = "circle" | "square" | "diamond";
 export type PlateDrive = "exciter" | "pivot";
 export type PlateModelKind = "studio" | "lab";
 export type Look = "textured" | "classic" | "ink";
@@ -183,8 +183,8 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
   "plate.shape": {
     label: "Shape",
     kind: "enum",
-    options: ["circle", "square"],
-    help: "Plate outline. A square with aspect ≠ 1 is a rectangle.",
+    options: ["circle", "square", "diamond"],
+    help: "Plate outline. A square with aspect ≠ 1 is a rectangle; diamond is a square with the corners cut.",
   },
   "plate.drive": {
     label: "Drive",

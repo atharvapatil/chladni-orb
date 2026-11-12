@@ -11,8 +11,6 @@
           t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
         }
         document.documentElement.dataset.theme = t;
-        var bg = localStorage.getItem("chladni-bg");
-        if (bg) document.documentElement.style.setProperty("--bg", bg);
       })();
     </script>
   </head>

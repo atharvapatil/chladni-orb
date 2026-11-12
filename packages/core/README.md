@@ -41,7 +41,7 @@ state. The groups: `listening` (input/floor/decay/partials/freeze),
 for the full catalog.
 
 Ready-made figures ship as `PRESETS` (`voice`, `classic-square-pivot`,
-`ink-square`, `brass-rectangle`, `drumhead`, `lab-aluminium`):
+`ink-square`, `drumhead`, `lab-aluminium`):
 
 ```ts
 import { PRESETS } from "@chladni/core";

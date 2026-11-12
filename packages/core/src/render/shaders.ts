@@ -20,7 +20,7 @@ vec2 rot(vec2 p, float a) {
   float c = cos(a), s = sin(a);
   return vec2(c * p.x - s * p.y, s * p.x + c * p.y);
 }
-// shape: 0 circle, 1 square, 2 rectangle (square with aspect ≠ 1)
+// shape: 0 circle, 1 square, 2 rectangle (square with aspect ≠ 1), 5 diamond (square with 45° corner cuts)
 float shapeMask(int shape, vec2 p, float aspect) {
   float d;
   if (shape == 0) {
@@ -29,6 +29,10 @@ float shapeMask(int shape, vec2 p, float aspect) {
     d = max(abs(p.x), abs(p.y));
   } else if (shape == 2) {
     d = max(abs(p.x), abs(p.y * aspect));
+  } else if (shape == 5) {
+    // chamfered square: keep the flats, clip |x|+|y| so each corner loses ~10%
+    float ay = abs(p.y * aspect);
+    d = max(max(abs(p.x), ay), (abs(p.x) + ay) / 1.9);
   } else if (shape == 3) {
     const float h = 0.8660254;
     d = max(abs(p.y) / h,
@@ -61,7 +65,9 @@ const float PI = 3.141592653589793;
 ${COMMON}
 void main() {
   vec2 p = vUv * 2.0 - 1.0;
-  p = rot(p, -uRotation);
+  // the diamond is the chamfered square stood on a corner: bake in 45° and
+  // shrink so its vertices (~1.34) stay inside the plate quad
+  p = rot(p, -uRotation - (uShape == 5 ? 0.7853982 : 0.0)) * (uShape == 5 ? 1.35 : 1.0);
   float mask = shapeMask(uShape, p, uAspect);
   // rectangle modes live on plate coords with v scaled by aspect
   vec2 q = vec2(p.x, p.y * uAspect);
@@ -256,7 +262,9 @@ void main() {
     }
   } else {
     float r = length(p);
-    float halo = max(0.0, 1.0 - max(0.0, r - 1.0) * 3.0) * uHaloAmp;
+    // rim glow only — interior gaps around cut-out shapes stay empty
+    float halo =
+      max(0.0, 1.0 - max(0.0, r - 1.0) * 3.0) * uHaloAmp * smoothstep(0.97, 1.0, r);
     col = uColor * halo;
     alpha = halo * uPlateAlpha;
   }

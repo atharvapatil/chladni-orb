@@ -262,7 +262,14 @@ export class Renderer {
       this.modeB[i * 4 + 3] = m.pair;
     }
     const aspect = p.plate.aspect;
-    const shapeIdx = p.plate.shape === "circle" ? 0 : p.plate.aspect !== 1 ? 2 : 1;
+    const shapeIdx =
+      p.plate.shape === "circle"
+        ? 0
+        : p.plate.shape === "diamond"
+          ? 5
+          : p.plate.aspect !== 1
+            ? 2
+            : 1;
     const morph = p.look.multiTone === "morph" ? 1 : 0;
 
     // upload the atlas when the lab solver publishes a new version
@@ -369,7 +376,13 @@ export class Renderer {
     gl.uniform1f(this.loc(this.compositeProg, "uExposure"), p.look.exposure);
     gl.uniform1f(
       this.loc(this.compositeProg, "uHaloAmp"),
-      (p.look.halo === "breathing" ? 0.3 + 0.7 * Math.min(1, f.energy) : 0.5) * 0.25,
+      // the halo is radial — it only hugs a circular rim, so skip it for
+      // cut-out shapes where it would float as a detached ring
+      (p.plate.shape === "circle"
+        ? p.look.halo === "breathing"
+          ? 0.3 + 0.7 * Math.min(1, f.energy)
+          : 0.5
+        : 0) * 0.25,
     );
     gl.uniform1f(this.loc(this.compositeProg, "uDScale"), 0.35);
     gl.uniform2f(this.loc(this.compositeProg, "uTexel"), 1 / this.w, 1 / this.h);

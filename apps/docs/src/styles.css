@@ -689,18 +689,11 @@ main > .sec-sub {
   display: block;
 }
 
-.preset-card .swatches {
-  display: flex;
-  gap: 4px;
-  margin-top: 10px;
-}
-
-.preset-card .swatches i {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--edge);
-  display: block;
+.preset-card canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  background: transparent;
+  margin-bottom: 10px;
 }
 
 /* ---------- use it ---------- */

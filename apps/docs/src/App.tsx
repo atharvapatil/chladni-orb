@@ -7,7 +7,6 @@ import {
   createElementAnalyser,
   createMicAnalyser,
   mergeParams,
-  type AnalyserHandle,
   type ChladniParams,
   type ChladniPlateHandle,
   type DeepPartial,
@@ -15,6 +14,8 @@ import {
   type SpectrumSource,
 } from "@chladni/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { renderSampleBuffer } from "./sample";
+import { renderVoiceBuffer } from "./voice";
 import "./styles.css";
 
 const GROUP_ORDER = ["listening", "plate", "studio", "lab", "look", "ink"] as const;
@@ -68,8 +69,6 @@ const THEME_LOOK: Record<Theme, DeepPartial<ChladniParams>> = {
   light: { look: { color: "#2b2520", plateAlpha: 1, plateColor: "#e9e6df", amount: 1 } },
 };
 
-const THEME_BG: Record<Theme, string> = { dark: "#0c0d10", light: "#f7f6f2" };
-
 function initialTheme(): Theme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
@@ -96,7 +95,6 @@ export function App() {
   const [plateSize, setPlateSize] = useState(320);
   const [plateRadius, setPlateRadius] = useState(6);
   const [parts, setParts] = useState<{ freq: number; amp: number }[]>([]);
-  const [pageBg, setPageBg] = useState(() => localStorage.getItem("chladni-bg") ?? "");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("warming up");
   const plateRef = useRef<ChladniPlateHandle | null>(null);
@@ -132,18 +130,6 @@ export function App() {
     const look = THEME_LOOK[theme].look;
     if (look) applyPatch({ look });
   }, [theme, applyPatch]);
-
-  // custom page background overrides the theme's --bg until cleared
-  useEffect(() => {
-    const root = document.documentElement;
-    if (pageBg) {
-      root.style.setProperty("--bg", pageBg);
-      localStorage.setItem("chladni-bg", pageBg);
-    } else {
-      root.style.removeProperty("--bg");
-      localStorage.removeItem("chladni-bg");
-    }
-  }, [pageBg]);
 
   const applyPreset = useCallback((key: string) => {
     const p = PRESETS[key];
@@ -186,10 +172,25 @@ export function App() {
     setSourceName("none");
   }, []);
 
-  const pickSim = useCallback(() => {
+  const pickSim = useCallback(async () => {
     stopSource();
-    setSource(simVoice);
+    const ctx = new AudioContext();
+    const buffer = await renderVoiceBuffer();
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 8192;
+    analyser.smoothingTimeConstant = 0.5;
+    src.connect(analyser);
+    analyser.connect(ctx.destination);
+    src.start();
+    setSource(analyser);
     setSourceName("simulated voice");
+    stopRef.current = () => {
+      src.stop();
+      void ctx.close();
+    };
   }, [stopSource]);
 
   const pickMic = useCallback(async () => {
@@ -209,17 +210,22 @@ export function App() {
 
   const pickSample = useCallback(async () => {
     stopSource();
-    const el = new Audio(`${import.meta.env.BASE_URL}audio/sample.wav`);
-    el.loop = true;
-    audioElRef.current = el;
-    const h: AnalyserHandle = createElementAnalyser(el);
-    await el.play();
-    setSource(h.analyser);
+    const ctx = new AudioContext();
+    const buffer = await renderSampleBuffer();
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 8192;
+    analyser.smoothingTimeConstant = 0.5;
+    src.connect(analyser);
+    analyser.connect(ctx.destination);
+    src.start();
+    setSource(analyser);
     setSourceName("sample");
     stopRef.current = () => {
-      h.stop();
-      void h.context.close();
-      el.pause();
+      src.stop();
+      void ctx.close();
     };
   }, [stopSource]);
 
@@ -242,35 +248,11 @@ export function App() {
     [stopSource],
   );
 
-  const pickSine = useCallback(() => {
-    stopSource();
-    const ctx = new AudioContext();
-    void ctx.resume();
-    const osc = ctx.createOscillator();
-    osc.frequency.value = 440;
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 8192;
-    analyser.smoothingTimeConstant = 0.5;
-    const mute = ctx.createGain();
-    mute.gain.value = 0;
-    osc.connect(analyser);
-    analyser.connect(mute);
-    mute.connect(ctx.destination);
-    osc.start();
-    setSource(analyser);
-    setSourceName("sine 440 Hz");
-    stopRef.current = () => {
-      osc.stop();
-      void ctx.close();
-    };
-  }, [stopSource]);
-
-  // ?source=sim|sine boots straight into a source (for screenshots)
+  // ?source=sim boots straight into a source (for screenshots)
   useEffect(() => {
     const src = new URLSearchParams(location.search).get("source");
     if (src === "sim") pickSim();
-    else if (src === "sine") pickSine();
-  }, [pickSim, pickSine]);
+  }, [pickSim]);
 
   const copySettings = useCallback(async () => {
     const json = JSON.stringify(diffParams(DEFAULT_PARAMS, params), null, 2);
@@ -387,6 +369,9 @@ export function App() {
             <div className="segctl">
               <span>Voice</span>
               <span className="seg">
+                <button className={sourceName === "none" ? "active" : ""} onClick={stopSource}>
+                  Off
+                </button>
                 <button
                   className={sourceName === "sample" ? "active" : ""}
                   onClick={() => void pickSample()}
@@ -411,9 +396,6 @@ export function App() {
                 >
                   Simulated voice
                 </button>
-                <button className={sourceName === "sine 440 Hz" ? "active" : ""} onClick={pickSine}>
-                  Sine 440
-                </button>
               </span>
             </div>
             <span className="row-actions">
@@ -428,11 +410,19 @@ export function App() {
             <div className="segctl">
               <span>Shape</span>
               <span className="seg">
-                {(["circle", "square"] as const).map((s) => (
+                {(["circle", "square", "diamond"] as const).map((s) => (
                   <button
                     key={s}
                     className={params.plate.shape === s ? "active" : ""}
-                    onClick={() => applyPatch({ plate: { shape: s } })}
+                    onClick={() =>
+                      applyPatch({
+                        plate: {
+                          shape: s,
+                          rotation: s === "circle" ? params.plate.rotation : 0,
+                          ...(s === "diamond" ? { aspect: 1 } : {}),
+                        },
+                      })
+                    }
                   >
                     {s}
                   </button>
@@ -467,7 +457,7 @@ export function App() {
                 {plateSize}px
               </label>
             </div>
-            {params.plate.shape === "square" && (
+            {params.plate.shape === "square" && params.plate.rotation % 90 === 0 && (
               <div className="segctl">
                 <span>Radius</span>
                 <label className="minislider">
@@ -502,19 +492,6 @@ export function App() {
                     onChange={(e) => applyPatch({ look: { color: e.target.value } })}
                   />
                 </label>
-                <label>
-                  Page
-                  <input
-                    type="color"
-                    value={pageBg || THEME_BG[theme]}
-                    onChange={(e) => setPageBg(e.target.value)}
-                  />
-                </label>
-                {pageBg && (
-                  <button onClick={() => setPageBg("")} title="Back to theme background">
-                    reset
-                  </button>
-                )}
               </span>
             </div>
           </div>
@@ -642,12 +619,17 @@ export function App() {
         <div className="presets">
           {Object.entries(PRESETS).map(([key, p]) => (
             <button key={key} className="preset-card" onClick={() => applyPreset(key)}>
+              <ChladniPlate
+                params={
+                  {
+                    ...p.params,
+                    look: { ...THEME_LOOK[theme].look, ...p.params.look },
+                  } as DeepPartial<ChladniParams>
+                }
+                analyser={simVoice}
+              />
               <b>{p.label}</b>
               <span>{p.description}</span>
-              <span className="swatches">
-                <i style={{ background: p.params.look?.plateColor ?? "#1a1a1c" }} />
-                <i style={{ background: p.params.look?.color ?? "#f3ead8" }} />
-              </span>
             </button>
           ))}
         </div>
