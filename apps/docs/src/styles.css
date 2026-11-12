@@ -88,6 +88,35 @@ h2 {
   width: 160px;
 }
 
+.customize {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.customize label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.customize input[type="color"] {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.customize button {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
 .status {
   font-variant-numeric: tabular-nums;
   color: var(--muted);

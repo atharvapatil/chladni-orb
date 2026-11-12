@@ -60,6 +60,8 @@ const THEME_LOOK: Record<Theme, DeepPartial<ChladniParams>> = {
   light: { look: { color: "#2b2520", plateAlpha: 1, plateColor: "#e9e6df", amount: 1 } },
 };
 
+const THEME_BG: Record<Theme, string> = { dark: "#0c0d10", light: "#f7f6f2" };
+
 function initialTheme(): Theme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
@@ -84,6 +86,7 @@ export function App() {
   const [sourceName, setSourceName] = useState("none");
   const [frozen, setFrozen] = useState(false);
   const [plateSize, setPlateSize] = useState(320);
+  const [pageBg, setPageBg] = useState(() => localStorage.getItem("chladni-bg") ?? "");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("warming up");
   const plateRef = useRef<ChladniPlateHandle | null>(null);
@@ -119,6 +122,18 @@ export function App() {
     const look = THEME_LOOK[theme].look;
     if (look) applyPatch({ look });
   }, [theme, applyPatch]);
+
+  // custom page background overrides the theme's --bg until cleared
+  useEffect(() => {
+    const root = document.documentElement;
+    if (pageBg) {
+      root.style.setProperty("--bg", pageBg);
+      localStorage.setItem("chladni-bg", pageBg);
+    } else {
+      root.style.removeProperty("--bg");
+      localStorage.removeItem("chladni-bg");
+    }
+  }, [pageBg]);
 
   const applyPreset = useCallback((key: string) => {
     const p = PRESETS[key];
@@ -316,6 +331,37 @@ export function App() {
           />
           {plateSize} px
         </label>
+        <div className="customize">
+          <label>
+            Plate
+            <input
+              type="color"
+              value={params.look.plateColor}
+              onChange={(e) => applyPatch({ look: { plateColor: e.target.value } })}
+            />
+          </label>
+          <label>
+            Sand
+            <input
+              type="color"
+              value={params.look.color}
+              onChange={(e) => applyPatch({ look: { color: e.target.value } })}
+            />
+          </label>
+          <label>
+            Page
+            <input
+              type="color"
+              value={pageBg || THEME_BG[theme]}
+              onChange={(e) => setPageBg(e.target.value)}
+            />
+          </label>
+          {pageBg && (
+            <button onClick={() => setPageBg("")} title="Back to theme background">
+              reset
+            </button>
+          )}
+        </div>
         <div className="sourcebar">
           <button
             className={sourceName === "sample" ? "active" : ""}
