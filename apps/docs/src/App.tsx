@@ -726,7 +726,10 @@ function Control({
       <label className="ctl" title={entry.help}>
         <span className="row">
           <span>
-            {entry.label} <span title={entry.help}>ⓘ</span>
+            {entry.label}{" "}
+            <span className="tip" data-tip={entry.help}>
+              ⓘ
+            </span>
           </span>
           <span className="val">
             {v.toFixed(digits)}
@@ -748,7 +751,12 @@ function Control({
     return (
       <label className="ctl" title={entry.help}>
         <span className="row">
-          <span>{entry.label}</span>
+          <span>
+            {entry.label}{" "}
+            <span className="tip" data-tip={entry.help}>
+              ⓘ
+            </span>
+          </span>
         </span>
         <span className="seg">
           {entry.options!.map((o) => (
@@ -768,7 +776,10 @@ function Control({
           checked={Boolean(value)}
           onChange={(e) => onChange(e.target.checked)}
         />{" "}
-        {entry.label}
+        {entry.label}{" "}
+        <span className="tip" data-tip={entry.help}>
+          ⓘ
+        </span>
       </label>
     );
   }
@@ -776,6 +787,9 @@ function Control({
     return (
       <label className="ctl" title={entry.help}>
         {entry.label}{" "}
+        <span className="tip" data-tip={entry.help}>
+          ⓘ
+        </span>{" "}
         <input
           type="color"
           value={typeof value === "string" ? value : "#f3ead8"}
