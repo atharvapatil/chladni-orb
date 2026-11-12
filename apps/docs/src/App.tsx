@@ -26,6 +26,14 @@ const GROUP_LABEL: Record<string, string> = {
   look: "Look",
   ink: "Ink",
 };
+const GROUP_DESC: Record<string, string> = {
+  listening: "What the analyser feeds the plate — gain, peak count, decay, silence floor.",
+  plate: "The physical plate — outline, size, material, where the exciter pushes.",
+  studio: "The analytical model — membrane tension meeting plate stiffness.",
+  lab: "A real free-edge plate in real units — thickness, elasticity, Poisson.",
+  look: "Paint, not physics — sand and plate colours, light, halo, plate opacity.",
+  ink: "Nodal-line rendering used by the ink look.",
+};
 
 function getPath(obj: unknown, path: string): unknown {
   const [g, k] = path.split(".");
@@ -87,6 +95,7 @@ export function App() {
   const [frozen, setFrozen] = useState(false);
   const [plateSize, setPlateSize] = useState(320);
   const [plateRadius, setPlateRadius] = useState(6);
+  const [parts, setParts] = useState<{ freq: number; amp: number }[]>([]);
   const [pageBg, setPageBg] = useState(() => localStorage.getItem("chladni-bg") ?? "");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("warming up");
@@ -149,6 +158,7 @@ export function App() {
       const p = plateRef.current;
       if (!p) return;
       const n = p.partials.length;
+      setParts(p.partials.slice(0, 8).map((x) => ({ freq: x.freq, amp: x.amp })));
       const list = p.partials
         .slice(0, 6)
         .map((x) => `${x.freq.toFixed(0)}`)
@@ -328,8 +338,29 @@ export function App() {
       </header>
 
       <main id="top">
+        <section className="hero">
+          <p className="oss">
+            <i />
+            Open source · MIT
+          </p>
+          <h1>chladni</h1>
+          <p className="tagline">
+            A voice-reactive Chladni plate for the web — sound in, sand figures out. Play any voice
+            through it, tune the look, take the code.
+          </p>
+          <div className="hero-actions">
+            <a className="btn primary" href="https://github.com/<user>/chladni">
+              Get the code →
+            </a>
+            <a className="btn" href="#inside">
+              How it works
+            </a>
+          </div>
+          <p className="credit">Open source · MIT licensed</p>
+        </section>
+
         <section
-          className="hero"
+          className="stage-card"
           style={
             {
               "--plate-size": `${plateSize}px`,
@@ -337,23 +368,7 @@ export function App() {
             } as CSSProperties
           }
         >
-          <div className="hero-copy">
-            <h1>chladni</h1>
-            <p className="tagline">
-              A voice-reactive Chladni plate for the web — sound in, sand figures out. Play any
-              voice through it, tune the look, take the code. Open source, MIT licensed.
-            </p>
-            <div className="hero-actions">
-              <a className="btn primary" href="https://github.com/<user>/chladni">
-                Get the code
-              </a>
-              <a className="btn" href="#inside">
-                How it works
-              </a>
-            </div>
-            <p className="credit">Open source · MIT</p>
-          </div>
-          <div className="hero-stage">
+          <div className="stage">
             <ChladniPlate
               params={patch}
               analyser={source}
@@ -367,161 +382,228 @@ export function App() {
               {params.plate.aspect !== 1 ? ` ×${params.plate.aspect}` : ""}
             </p>
           </div>
-        </section>
 
-        <div className="deck">
-          <label className="sizebar">
-            Size
-            <input
-              type="range"
-              min={128}
-              max={320}
-              step={1}
-              value={plateSize}
-              onChange={(e) => setPlateSize(Number(e.target.value))}
-            />
-            {plateSize} px
-          </label>
-          <div className="customize">
-            <span className="seg">
-              {(["circle", "square"] as const).map((s) => (
+          <div className="stage-row">
+            <div className="segctl">
+              <span>Voice</span>
+              <span className="seg">
                 <button
-                  key={s}
-                  className={params.plate.shape === s ? "active" : ""}
-                  onClick={() => applyPatch({ plate: { shape: s } })}
+                  className={sourceName === "sample" ? "active" : ""}
+                  onClick={() => void pickSample()}
                 >
-                  {s}
+                  Sample
                 </button>
-              ))}
+                <button
+                  className={sourceName === "microphone" ? "active" : ""}
+                  onClick={() => void pickMic()}
+                >
+                  Microphone
+                </button>
+                <button
+                  className={sourceName.startsWith("file") ? "active" : ""}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  Your file
+                </button>
+                <button
+                  className={sourceName === "simulated voice" ? "active" : ""}
+                  onClick={pickSim}
+                >
+                  Simulated voice
+                </button>
+                <button className={sourceName === "sine 440 Hz" ? "active" : ""} onClick={pickSine}>
+                  Sine 440
+                </button>
+              </span>
+            </div>
+            <span className="row-actions">
+              <button onClick={() => plateRef.current?.resetSand()}>Reset sand</button>
+              <button className={frozen ? "primary" : ""} onClick={() => setFrozen((f) => !f)}>
+                {frozen ? "Unfreeze" : "Freeze"}
+              </button>
             </span>
-            {params.plate.shape === "square" && (
-              <label className="radius">
-                Radius
+          </div>
+
+          <div className="stage-grid">
+            <div className="segctl">
+              <span>Shape</span>
+              <span className="seg">
+                {(["circle", "square"] as const).map((s) => (
+                  <button
+                    key={s}
+                    className={params.plate.shape === s ? "active" : ""}
+                    onClick={() => applyPatch({ plate: { shape: s } })}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="segctl">
+              <span>Look</span>
+              <span className="seg">
+                {(["textured", "classic", "ink"] as const).map((l) => (
+                  <button
+                    key={l}
+                    className={params.look.look === l ? "active" : ""}
+                    onClick={() => applyPatch({ look: { look: l } })}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="segctl">
+              <span>Size</span>
+              <label className="minislider">
                 <input
                   type="range"
-                  min={0}
-                  max={32}
+                  min={128}
+                  max={320}
                   step={1}
-                  value={plateRadius}
-                  onChange={(e) => setPlateRadius(Number(e.target.value))}
+                  value={plateSize}
+                  onChange={(e) => setPlateSize(Number(e.target.value))}
                 />
-                {plateRadius}
+                {plateSize}px
               </label>
+            </div>
+            {params.plate.shape === "square" && (
+              <div className="segctl">
+                <span>Radius</span>
+                <label className="minislider">
+                  <input
+                    type="range"
+                    min={0}
+                    max={32}
+                    step={1}
+                    value={plateRadius}
+                    onChange={(e) => setPlateRadius(Number(e.target.value))}
+                  />
+                  {plateRadius}px
+                </label>
+              </div>
             )}
-            <label>
-              Plate
-              <input
-                type="color"
-                value={params.look.plateColor}
-                onChange={(e) => applyPatch({ look: { plateColor: e.target.value } })}
-              />
-            </label>
-            <label>
-              Sand
-              <input
-                type="color"
-                value={params.look.color}
-                onChange={(e) => applyPatch({ look: { color: e.target.value } })}
-              />
-            </label>
-            <label>
-              Page
-              <input
-                type="color"
-                value={pageBg || THEME_BG[theme]}
-                onChange={(e) => setPageBg(e.target.value)}
-              />
-            </label>
-            {pageBg && (
-              <button onClick={() => setPageBg("")} title="Back to theme background">
-                reset
-              </button>
-            )}
-          </div>
-          <div className="sourcebar">
-            <button
-              className={sourceName === "sample" ? "active" : ""}
-              onClick={() => void pickSample()}
-            >
-              Sample
-            </button>
-            <button
-              className={sourceName === "microphone" ? "active" : ""}
-              onClick={() => void pickMic()}
-            >
-              Microphone
-            </button>
-            <button
-              className={sourceName.startsWith("file") ? "active" : ""}
-              onClick={() => fileRef.current?.click()}
-            >
-              Your file
-            </button>
-            <button className={sourceName === "simulated voice" ? "active" : ""} onClick={pickSim}>
-              Simulated voice
-            </button>
-            <button className={sourceName === "sine 440 Hz" ? "active" : ""} onClick={pickSine}>
-              Sine 440
-            </button>
-            <button onClick={() => plateRef.current?.resetSand()}>Reset sand</button>
-            <button className={frozen ? "active" : ""} onClick={() => setFrozen((f) => !f)}>
-              {frozen ? "Unfreeze" : "Freeze"}
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="audio/*"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void pickFile(f);
-              }}
-            />
+            <div className="segctl">
+              <span>Colours</span>
+              <span className="pickers">
+                <label>
+                  Plate
+                  <input
+                    type="color"
+                    value={params.look.plateColor}
+                    onChange={(e) => applyPatch({ look: { plateColor: e.target.value } })}
+                  />
+                </label>
+                <label>
+                  Sand
+                  <input
+                    type="color"
+                    value={params.look.color}
+                    onChange={(e) => applyPatch({ look: { color: e.target.value } })}
+                  />
+                </label>
+                <label>
+                  Page
+                  <input
+                    type="color"
+                    value={pageBg || THEME_BG[theme]}
+                    onChange={(e) => setPageBg(e.target.value)}
+                  />
+                </label>
+                {pageBg && (
+                  <button onClick={() => setPageBg("")} title="Back to theme background">
+                    reset
+                  </button>
+                )}
+              </span>
+            </div>
           </div>
           <div className="status">{status}</div>
-        </div>
-
-        <h2 id="tune" className="sec">
-          <span className="num">01</span>Tune
-        </h2>
-        <p className="sec-sub">
-          Every slider changes the plate live. Hover the ⓘ for what each does — copy the settings to
-          share a look.
-        </p>
-        <div className="tune-actions">
-          <button
-            onClick={() => {
-              setParams(DEFAULT_PARAMS);
-              setPatch({});
-              plateRef.current?.resetSand();
+          <input
+            ref={fileRef}
+            type="file"
+            accept="audio/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void pickFile(f);
             }}
-          >
-            Reset
-          </button>
-          <button onClick={() => void copySettings()}>{copied ? "Copied" : "Copy settings"}</button>
+          />
+        </section>
+
+        <div className="sec-head">
+          <h2 id="tune" className="sec">
+            <span className="eyebrow">01 · Controls</span>Tune
+          </h2>
+          <div className="sec-side">
+            <p className="sec-sub">
+              Every slider changes the plate live. Hover the ⓘ for what each does, and copy the
+              settings to share a look.
+            </p>
+            <div className="tune-actions">
+              <button
+                onClick={() => {
+                  setParams(DEFAULT_PARAMS);
+                  setPatch({});
+                  plateRef.current?.resetSand();
+                }}
+              >
+                Reset
+              </button>
+              <button onClick={() => void copySettings()}>
+                {copied ? "Copied" : "Copy settings"}
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="tune">
-          {groups.map(([g, entries]) => (
-            <fieldset key={g}>
-              <legend>{GROUP_LABEL[g] ?? g}</legend>
-              {entries.map(([path, entry]) => (
-                <Control
-                  key={path}
-                  entry={entry}
-                  value={getPath(params, path)}
-                  onChange={(v) => {
-                    const p: DeepPartial<ChladniParams> = {};
-                    setPath(p, path, v);
-                    applyPatch(p);
-                  }}
-                />
+        <div className="tune-layout">
+          <div className="tune-groups">
+            {groups.map(([g, entries]) => (
+              <div className="gcard" key={g}>
+                <div className="gside">
+                  <b>{GROUP_LABEL[g] ?? g}</b>
+                  <p>{GROUP_DESC[g]}</p>
+                </div>
+                <div className="gbody">
+                  {entries.map(([path, entry]) => (
+                    <Control
+                      key={path}
+                      entry={entry}
+                      value={getPath(params, path)}
+                      onChange={(v) => {
+                        const p: DeepPartial<ChladniParams> = {};
+                        setPath(p, path, v);
+                        applyPatch(p);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <aside className="side">
+            <div className="pcard">
+              <b>Status</b>
+              <p className="pstatus">{status}</p>
+            </div>
+            <div className="pcard">
+              <b>Live partials</b>
+              {parts.length === 0 && <p className="pstatus">listening…</p>}
+              {parts.map((x, i) => (
+                <div className="lvl" key={i}>
+                  <span className="lvl-f">{x.freq.toFixed(0)} Hz</span>
+                  <span className="lvl-bar">
+                    <i style={{ width: `${Math.min(100, x.amp * 100)}%` }} />
+                  </span>
+                  <span className="lvl-v">{x.amp.toFixed(2)}</span>
+                </div>
               ))}
-            </fieldset>
-          ))}
+            </div>
+          </aside>
         </div>
 
         <h2 id="inside" className="sec">
-          <span className="num">02</span>How the plate is built
+          <span className="eyebrow">02 · Inside</span>How the plate is built
         </h2>
         <p className="sec-sub">Four views, each one live with the same simulated voice.</p>
         <div className="how">
@@ -554,7 +636,7 @@ export function App() {
         </p>
 
         <h2 id="presets" className="sec">
-          <span className="num">03</span>Presets
+          <span className="eyebrow">03 · Presets</span>Presets
         </h2>
         <p className="sec-sub">Starter scenes — pick one, then make it yours in Tune.</p>
         <div className="presets">
@@ -571,7 +653,7 @@ export function App() {
         </div>
 
         <h2 id="use" className="sec">
-          <span className="num">04</span>Use it in your project
+          <span className="eyebrow">04 · Use it</span>Use it in your project
         </h2>
         <p className="sec-sub">
           A React component over a plain-TypeScript engine — install and give it any AnalyserNode.
