@@ -14,7 +14,7 @@ import {
   type ParamSchemaEntry,
   type SpectrumSource,
 } from "@chladni/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import "./styles.css";
 
 const GROUP_ORDER = ["listening", "plate", "studio", "lab", "look", "ink"] as const;
@@ -69,6 +69,7 @@ export function App() {
   const [source, setSource] = useState<SpectrumSource | AnalyserNode | null>(null);
   const [sourceName, setSourceName] = useState("none");
   const [frozen, setFrozen] = useState(false);
+  const [plateSize, setPlateSize] = useState(320);
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("warming up");
   const plateRef = useRef<ChladniPlateHandle | null>(null);
@@ -258,7 +259,7 @@ export function App() {
         A voice-reactive Chladni plate for the web — sound in, sand figures out.
       </p>
 
-      <section className="hero">
+      <section className="hero" style={{ "--plate-size": `${plateSize}px` } as CSSProperties}>
         <ChladniPlate
           params={patch}
           analyser={source}
@@ -267,6 +268,18 @@ export function App() {
             plateRef.current = p;
           }}
         />
+        <label className="sizebar">
+          Size
+          <input
+            type="range"
+            min={128}
+            max={320}
+            step={1}
+            value={plateSize}
+            onChange={(e) => setPlateSize(Number(e.target.value))}
+          />
+          {plateSize} px
+        </label>
         <div className="sourcebar">
           <button
             className={sourceName === "sample" ? "active" : ""}

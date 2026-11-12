@@ -55,11 +55,24 @@ h2 {
 }
 
 .hero canvas {
-  width: min(80vw, 640px);
-  height: min(80vw, 640px);
-  background: #000;
-  border-radius: 8px;
-  border: 1px solid var(--edge);
+  width: var(--plate-size, 320px);
+  height: var(--plate-size, 320px);
+  max-width: 80vw;
+  max-height: 80vw;
+  background: transparent;
+}
+
+.sizebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sizebar input[type="range"] {
+  width: 160px;
 }
 
 .status {
@@ -200,9 +213,7 @@ button.active {
 .how canvas {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 8px;
-  border: 1px solid var(--edge);
-  background: #000;
+  background: transparent;
 }
 
 .how figcaption {
