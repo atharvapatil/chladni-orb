@@ -47,7 +47,7 @@ export const FIELD_FRAG = `#version 300 es
 precision highp float;
 uniform sampler2D uBessel;
 uniform vec4 uModeA[${MAX_MODES}]; // basis(0 rect,1 polar), n, m, sign
-uniform vec4 uModeB[${MAX_MODES}]; // bessel zero, amp, freq, unused
+uniform vec4 uModeB[${MAX_MODES}]; // bessel zero, coef, freq, pair(0/1/2)
 uniform int uModeCount;
 uniform float uMorph;    // 0 physical, 1 morph
 uniform float uTime;
@@ -66,13 +66,14 @@ void main() {
   vec2 q = vec2(p.x, p.y * uAspect);
   float E = 0.0;
   float W = 0.0;
-  float norm = 0.0;
+  float acc = 0.0;   // coherent sum inside a degenerate pair
+  float n2 = 0.0;    // Σ coef²
   for (int i = 0; i < ${MAX_MODES}; i++) {
     if (i >= uModeCount) break;
     vec4 A = uModeA[i];
     vec4 B = uModeB[i];
-    float amp = B.y;
-    norm += amp;
+    float coef = B.y;
+    n2 += coef * coef;
     float phi;
     if (A.x < 0.5) {
       float n = A.y, m = A.z;
@@ -88,13 +89,21 @@ void main() {
       float J = texture(uBessel, vec2(B.x * r / 40.0, (n + 0.5) / 13.0)).r;
       phi = J * (A.w > 0.0 ? cos(n * th) : sin(n * th));
     }
+    float c = coef * phi;
     if (uMorph > 0.5) {
-      W += amp * phi * cos(B.z * 0.0314159 * uTime); // omega*t slowed ~1/200
+      W += c * cos(B.z * 0.0314159 * uTime); // omega*t slowed ~1/200
+    }
+    if (B.w < 0.5) {
+      E += c * c;            // singleton
+    } else if (B.w < 1.5) {
+      acc = c;               // first of a pair
     } else {
-      E += amp * amp * phi * phi;
+      acc += c;              // second: close the pair coherently
+      E += acc * acc;
+      acc = 0.0;
     }
   }
-  norm = max(1e-4, norm);
+  float norm = max(1e-4, sqrt(n2));
   float val = uMorph > 0.5 ? abs(W) / norm : sqrt(E) / norm;
   outColor = vec4(val, mask, 0.0, 1.0);
 }`;
@@ -213,14 +222,17 @@ void main() {
       }
       col = mix(col, sc, g);
     } else {
-      float ink = smoothstep(uInk.x * 0.5, 0.0, field) * uInk.y +
-                  uInk.z * pow(1.0 - field, 2.0) * 0.3;
+      float lines = smoothstep(0.08 + 0.35 * uInk.x, 0.0, field);
+      float valleys = uInk.z * smoothstep(0.6, 0.05, field) * 0.35;
+      float ink = lines + valleys;
       float glow = 0.0;
       for (int i = 0; i < 8; i++) {
         float a = float(i) * 0.7853982;
-        glow += texture(uField, vUv + vec2(cos(a), sin(a)) * uInk.w * 0.05).r;
+        float f2 = texture(uField, vUv + vec2(cos(a), sin(a)) * uInk.w * 0.05).r;
+        glow += smoothstep(0.08 + 0.35 * uInk.x, 0.0, f2);
       }
-      ink = clamp(ink + uInk.w * smoothstep(0.5, 0.0, glow * 0.125) * 0.5, 0.0, 1.0);
+      ink += uInk.w * glow * 0.125 * 0.5;
+      ink = clamp(uInk.y * ink, 0.0, 1.0);
       col = mix(col, uColor, ink);
     }
   } else {

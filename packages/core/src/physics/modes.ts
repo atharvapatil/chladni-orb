@@ -11,6 +11,10 @@ export interface Mode {
   /** rect: 0 = pure product, ±1 = cos·cos ± cos·cos family;
    *  polar: +1 = cos(nθ), −1 = sin(nθ) */
   sign: 1 | 0 | -1;
+  /** 0 = singleton; 1/2 = first/second member of a degenerate pair
+   *  (same k: polar cos/sin, rect ±). Pairs are always adjacent after
+   *  sorting and are summed coherently by the mixer/renderer. */
+  pair: 0 | 1 | 2;
   /** wavenumber rad/m */
   k: number;
   /** Hz */
@@ -98,7 +102,8 @@ export class AnalyticalModel implements PlateModel {
     ]);
     if (key === this.cacheKey) return this.cache;
 
-    const modes: Mode[] = [];
+    // build groups so degenerate partners stay adjacent after sorting
+    const groups: Mode[][] = [];
     const sizeM = plate.size / 100;
     if (plate.shape === "circle") {
       const R = sizeM / 2;
@@ -107,8 +112,15 @@ export class AnalyticalModel implements PlateModel {
           const k = besselZero(n, m) / R;
           const freq = dispersionHz(k, params);
           if (freq > this.maxHz) continue;
-          modes.push({ basis: "polar", n, m, sign: 1, k, freq });
-          if (n > 0) modes.push({ basis: "polar", n, m, sign: -1, k, freq });
+          const base = { basis: "polar" as const, n, m, k, freq };
+          if (n === 0) {
+            groups.push([{ ...base, sign: 1, pair: 0 }]);
+          } else {
+            groups.push([
+              { ...base, sign: 1, pair: 1 },
+              { ...base, sign: -1, pair: 2 },
+            ]);
+          }
         }
       }
     } else {
@@ -125,7 +137,7 @@ export class AnalyticalModel implements PlateModel {
             const k = Math.PI * Math.hypot(n / Lx, m / Ly);
             const freq = dispersionHz(k, params);
             if (freq > this.maxHz) continue;
-            modes.push({ basis: "rect", n, m, sign: 0, k, freq });
+            groups.push([{ basis: "rect", n, m, sign: 0, pair: 0, k, freq }]);
           }
         }
       } else {
@@ -135,14 +147,26 @@ export class AnalyticalModel implements PlateModel {
             const k = Math.PI * Math.hypot(n / Lx, m / Ly);
             const freq = dispersionHz(k, params);
             if (freq > this.maxHz) continue;
-            modes.push({ basis: "rect", n, m, sign: 1, k, freq });
-            if (n < m) modes.push({ basis: "rect", n, m, sign: -1, k, freq });
+            const base = { basis: "rect" as const, n, m, k, freq };
+            if (n < m) {
+              groups.push([
+                { ...base, sign: 1, pair: 1 },
+                { ...base, sign: -1, pair: 2 },
+              ]);
+            } else {
+              groups.push([{ ...base, sign: 1, pair: 0 }]);
+            }
           }
         }
       }
     }
-    modes.sort((a, b) => a.freq - b.freq);
-    this.cache = modes.slice(0, this.maxModes);
+    groups.sort((a, b) => a[0]!.freq - b[0]!.freq);
+    const modes: Mode[] = [];
+    for (const g of groups) {
+      if (modes.length + g.length > this.maxModes) break;
+      modes.push(...g);
+    }
+    this.cache = modes;
     this.cacheKey = key;
     return this.cache;
   }

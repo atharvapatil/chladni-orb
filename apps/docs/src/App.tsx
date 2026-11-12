@@ -107,9 +107,11 @@ export function App() {
         .join(", ");
       setStatus(
         p.supported
-          ? n > 0
-            ? `listening · ${n} partial${n === 1 ? "" : "s"} (${list}${n > 6 ? "…" : ""} Hz)`
-            : "listening · silence"
+          ? p.level.tremor > 0.5
+            ? "listening · trembling"
+            : n > 0
+              ? `listening · ${n} partial${n === 1 ? "" : "s"} (${list}${n > 6 ? "…" : ""} Hz)`
+              : "listening · silence"
           : "WebGL2 unavailable — static fallback",
       );
     }, 250);
@@ -180,10 +182,35 @@ export function App() {
     [stopSource],
   );
 
-  // ?source=sim boots straight into the simulated voice (for screenshots)
+  const pickSine = useCallback(() => {
+    stopSource();
+    const ctx = new AudioContext();
+    void ctx.resume();
+    const osc = ctx.createOscillator();
+    osc.frequency.value = 440;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 8192;
+    analyser.smoothingTimeConstant = 0.5;
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
+    osc.connect(analyser);
+    analyser.connect(mute);
+    mute.connect(ctx.destination);
+    osc.start();
+    setSource(analyser);
+    setSourceName("sine 440 Hz");
+    stopRef.current = () => {
+      osc.stop();
+      void ctx.close();
+    };
+  }, [stopSource]);
+
+  // ?source=sim|sine boots straight into a source (for screenshots)
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("source") === "sim") pickSim();
-  }, [pickSim]);
+    const src = new URLSearchParams(location.search).get("source");
+    if (src === "sim") pickSim();
+    else if (src === "sine") pickSine();
+  }, [pickSim, pickSine]);
 
   const copySettings = useCallback(async () => {
     const json = JSON.stringify(diffParams(DEFAULT_PARAMS, params), null, 2);
@@ -257,6 +284,9 @@ export function App() {
           </button>
           <button className={sourceName === "simulated voice" ? "active" : ""} onClick={pickSim}>
             Simulated voice
+          </button>
+          <button className={sourceName === "sine 440 Hz" ? "active" : ""} onClick={pickSine}>
+            Sine 440
           </button>
           <button onClick={() => plateRef.current?.resetSand()}>Reset sand</button>
           <button className={frozen ? "active" : ""} onClick={() => setFrozen((f) => !f)}>

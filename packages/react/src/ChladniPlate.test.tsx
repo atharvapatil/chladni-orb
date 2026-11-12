@@ -22,7 +22,8 @@ vi.mock("@chladni/core", async (importOriginal) => {
   return { ...mod, createChladniPlate: vi.fn(() => fake) };
 });
 
-import { createChladniPlate } from "@chladni/core";
+import { createChladniPlate, DEFAULT_PARAMS } from "@chladni/core";
+import type { ChladniParams } from "@chladni/core";
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -53,16 +54,32 @@ describe("ChladniPlate", () => {
     root = createRoot(container);
   });
 
-  it("setParams is called when the params prop changes", async () => {
+  it("setParams is called with a full params object when the prop changes", async () => {
     root = createRoot(container);
     await act(async () => {
       root.render(<ChladniPlate params={{ plate: { size: 30 } }} />);
     });
-    expect(fake.setParams).toHaveBeenCalledWith({ plate: { size: 30 } });
+    const arg = fake.setParams.mock.calls.at(-1)![0] as ChladniParams;
+    expect(arg.plate.size).toBe(30);
+    expect(arg.listening).toEqual(DEFAULT_PARAMS.listening);
     await act(async () => {
       root.render(<ChladniPlate params={{ plate: { size: 50 } }} />);
     });
-    expect(fake.setParams).toHaveBeenLastCalledWith({ plate: { size: 50 } });
+    expect((fake.setParams.mock.calls.at(-1)![0] as ChladniParams).plate.size).toBe(50);
+  });
+
+  it("removing a params key resets it to the default (authoritative prop)", async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root.render(<ChladniPlate params={{ plate: { exciterX: 0.5 } }} />);
+    });
+    expect((fake.setParams.mock.calls.at(-1)![0] as ChladniParams).plate.exciterX).toBe(0.5);
+    await act(async () => {
+      root.render(<ChladniPlate params={{}} />);
+    });
+    expect((fake.setParams.mock.calls.at(-1)![0] as ChladniParams).plate.exciterX).toBe(
+      DEFAULT_PARAMS.plate.exciterX,
+    );
   });
 
   it("freeze follows the frozen prop", async () => {

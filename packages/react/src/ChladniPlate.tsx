@@ -1,5 +1,7 @@
 import {
   createChladniPlate,
+  DEFAULT_PARAMS,
+  mergeParams,
   type ChladniParams,
   type ChladniPlate as CorePlate,
   type DeepPartial,
@@ -66,12 +68,13 @@ export const ChladniPlate = forwardRef<CorePlate | null, ChladniPlateProps>(
         else if (ref) ref.current = null;
         plate.destroy();
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // `params` is authoritative: a diff over DEFAULT_PARAMS, so removing a
+    // key resets it rather than leaving a stale value
     useEffect(() => {
       if (paramsJson !== "null") {
-        plateRef.current?.setParams(JSON.parse(paramsJson));
+        plateRef.current?.setParams(mergeParams(DEFAULT_PARAMS, JSON.parse(paramsJson)));
       }
     }, [paramsJson]);
 

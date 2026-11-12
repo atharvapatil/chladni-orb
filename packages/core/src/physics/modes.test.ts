@@ -7,6 +7,7 @@ const rectMode = (n: number, m: number, sign: 1 | -1): Mode => ({
   n,
   m,
   sign,
+  pair: 0,
   k: 0,
   freq: 0,
 });
@@ -48,7 +49,7 @@ describe("rect modes", () => {
 
 describe("polar modes", () => {
   it("n=0 mode is 0 at r=1 (fixed rim)", () => {
-    const mode: Mode = { basis: "polar", n: 0, m: 1, sign: 1, k: 0, freq: 0 };
+    const mode: Mode = { basis: "polar", n: 0, m: 1, sign: 1, pair: 0, k: 0, freq: 0 };
     expect(evalMode(mode, 1, 0)).toBeCloseTo(0, 4);
     expect(evalMode(mode, Math.SQRT1_2, Math.SQRT1_2)).toBeCloseTo(0, 4);
   });
@@ -89,6 +90,30 @@ describe("AnalyticalModel.modes", () => {
     expect(modes[0]!.freq).toBeGreaterThan(20);
     expect(modes[0]!.freq).toBeLessThan(400);
     expect(modes[modes.length - 1]!.freq).toBeLessThanOrEqual(12000);
+  });
+
+  it("degenerate pairs stay adjacent and are never split by maxModes", () => {
+    const model = new AnalyticalModel();
+    const modes = model.modes(DEFAULT_PARAMS); // circle → polar
+    expect(modes.some((m) => m.pair === 1)).toBe(true);
+    for (let i = 0; i < modes.length; i++) {
+      const m = modes[i]!;
+      if (m.pair === 1) {
+        const partner = modes[i + 1]!;
+        expect(partner.pair).toBe(2);
+        expect(partner.freq).toBe(m.freq);
+        expect(partner.n).toBe(m.n);
+        expect(partner.m).toBe(m.m);
+        i++;
+      } else {
+        expect(m.pair).not.toBe(1);
+      }
+    }
+    expect(modes[modes.length - 1]!.pair).not.toBe(1);
+    // odd maxModes must not split a pair
+    const odd = new AnalyticalModel({ maxModes: 7 });
+    const om = odd.modes(DEFAULT_PARAMS);
+    expect(om[om.length - 1]!.pair).not.toBe(1);
   });
 
   it("memoises on the params that matter", () => {

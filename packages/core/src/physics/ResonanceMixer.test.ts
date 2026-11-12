@@ -8,10 +8,16 @@ const mode = (freq: number, over?: Partial<Mode>): Mode => ({
   n: 1,
   m: 2,
   sign: -1,
+  pair: 0,
   k: 1,
   freq,
   ...over,
 });
+
+const polarPair = (freq: number, n: number, m: number): [Mode, Mode] => [
+  { basis: "polar", n, m, sign: 1, pair: 1, k: 1, freq },
+  { basis: "polar", n, m, sign: -1, pair: 2, k: 1, freq },
+];
 
 const DT = 1 / 60;
 const P = mergeParams(DEFAULT_PARAMS, { plate: { exciterAmount: 0 } });
@@ -21,8 +27,8 @@ describe("ResonanceMixer", () => {
     const modes = [mode(440), mode(8000)];
     const mix = new ResonanceMixer({ gamma: 0.04 });
     const out = mix.update(DT, [{ freq: 440, amp: 1 }], modes, P);
-    expect(out.amps[0]).toBeCloseTo(1, 3);
-    expect(out.amps[1]).toBeLessThan(0.01);
+    expect(out.coeffs[0]).toBeCloseTo(1, 3);
+    expect(out.coeffs[1]).toBeLessThan(0.01);
     expect(out.tremor).toBe(0);
   });
 
@@ -30,7 +36,7 @@ describe("ResonanceMixer", () => {
     const modes = [mode(400), mode(500)];
     const mix = new ResonanceMixer({ gamma: 0.3 });
     const out = mix.update(DT, [{ freq: 450, amp: 1 }], modes, P);
-    const ratio = out.amps[0]! / out.amps[1]!;
+    const ratio = out.coeffs[0]! / out.coeffs[1]!;
     expect(ratio).toBeGreaterThan(0.8);
     expect(ratio).toBeLessThan(1.25);
   });
@@ -40,8 +46,52 @@ describe("ResonanceMixer", () => {
     const p = mergeParams(P, { plate: { drive: "pivot" } });
     const mix = new ResonanceMixer();
     const out = mix.update(DT, [{ freq: 400, amp: 1 }], modes, p);
-    expect(out.amps[0]).toBe(0);
-    expect(out.amps[1]).toBeGreaterThan(0.9);
+    expect(out.coeffs[0]).toBe(0);
+    expect(out.coeffs[1]).toBeGreaterThan(0.9);
+  });
+
+  it("pivot on a degenerate pair kills the centre-antinode member", () => {
+    // square (1,2) ± pair: +1 is an antinode at centre, −1 a node
+    const pair: Mode[] = [
+      { basis: "rect", n: 1, m: 2, sign: 1, pair: 1, k: 1, freq: 400 },
+      { basis: "rect", n: 1, m: 2, sign: -1, pair: 2, k: 1, freq: 400 },
+    ];
+    const p = mergeParams(P, { plate: { drive: "pivot" } });
+    const mix = new ResonanceMixer();
+    const out = mix.update(DT, [{ freq: 400, amp: 1 }], pair, p);
+    expect(out.coeffs[0]).toBeCloseTo(0, 6);
+    expect(out.coeffs[1]).toBeGreaterThan(0.9);
+  });
+
+  it("degenerate pair: exciter on the cos axis gives |c_cos| ≫ |c_sin|", () => {
+    const pair = polarPair(500, 2, 1);
+    const p = mergeParams(P, {
+      plate: { exciterAmount: 1, exciterX: 0.7, exciterY: 0 },
+    });
+    const mix = new ResonanceMixer();
+    const out = mix.update(DT, [{ freq: 500, amp: 1 }], pair, p);
+    expect(Math.abs(out.coeffs[0]!)).toBeGreaterThan(0.9);
+    expect(Math.abs(out.coeffs[1]!)).toBeLessThan(0.1);
+  });
+
+  it("degenerate pair: exciter at 45° splits an n=1 pair equally", () => {
+    const pair = polarPair(500, 1, 1);
+    const p = mergeParams(P, {
+      plate: { exciterAmount: 1, exciterX: 0.5, exciterY: 0.5 },
+    });
+    const mix = new ResonanceMixer();
+    const out = mix.update(DT, [{ freq: 500, amp: 1 }], pair, p);
+    expect(Math.abs(out.coeffs[0]!)).toBeCloseTo(Math.abs(out.coeffs[1]!), 6);
+  });
+
+  it("degenerate pair: e=0 gives equal magnitudes for any exciter", () => {
+    const pair = polarPair(500, 2, 1);
+    const p = mergeParams(P, {
+      plate: { exciterAmount: 0, exciterX: 0.7, exciterY: 0 },
+    });
+    const mix = new ResonanceMixer();
+    const out = mix.update(DT, [{ freq: 500, amp: 1 }], pair, p);
+    expect(Math.abs(out.coeffs[0]!)).toBeCloseTo(Math.abs(out.coeffs[1]!), 6);
   });
 
   it("exciter at a node of a mode collapses its factor with e=1", () => {
@@ -51,16 +101,16 @@ describe("ResonanceMixer", () => {
     const p = mergeParams(P, { plate: { exciterAmount: 1, exciterX: 0, exciterY: 0 } });
     const mix = new ResonanceMixer();
     const out = mix.update(DT, [{ freq: 400, amp: 1 }], modes, p);
-    expect(out.amps[0]).toBeCloseTo(0, 6);
+    expect(out.coeffs[0]).toBeCloseTo(0, 6);
   });
 
-  it("ring-down: silent update decays amps, high modes faster", () => {
+  it("ring-down: silent update decays coeffs, high modes faster", () => {
     const modes = [mode(200), mode(2000)];
     const mix = new ResonanceMixer({ gamma: 1 });
     const p = mergeParams(P, { listening: { decay: 200 } });
     mix.update(DT, [{ freq: 200, amp: 1 }], modes, p);
-    const a0 = [...mix.update(DT, [{ freq: 2000, amp: 1 }], modes, p).amps];
-    const a1 = [...mix.update(0.1, [], modes, p).amps];
+    const a0 = [...mix.update(DT, [{ freq: 2000, amp: 1 }], modes, p).coeffs];
+    const a1 = [...mix.update(0.1, [], modes, p).coeffs];
     expect(a1[0]).toBeLessThan(a0[0]!);
     expect(a1[1]).toBeLessThan(a0[1]!);
     // high mode (index 1) decayed by a larger fraction

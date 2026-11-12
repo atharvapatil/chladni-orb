@@ -6,10 +6,6 @@ import { ResonanceMixer } from "./physics/ResonanceMixer";
 import { Renderer } from "./render/Renderer";
 import { getSharedGL } from "./render/context";
 
-interface TickedSource extends SpectrumSource {
-  tick?(dt: number): void;
-}
-
 export interface ChladniPlateOptions {
   params?: DeepPartial<ChladniParams>;
   analyser?: SpectrumSource | AnalyserNode | null;
@@ -36,6 +32,8 @@ export interface ChladniPlate {
   stop(): void;
   destroy(): void;
   readonly partials: readonly SpectralPartial[];
+  /** per-frame signal level from the mixer */
+  readonly level: { energy: number; tremor: number };
   readonly supported: boolean;
 }
 
@@ -65,6 +63,7 @@ export function createChladniPlate(
       stop() {},
       destroy() {},
       partials: [],
+      level: { energy: 0, tremor: 0 },
       supported: false,
     };
   }
@@ -80,7 +79,7 @@ export function createChladniPlate(
     globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 
   let pa: PartialAnalyser | null = null;
-  let source: TickedSource | null = null;
+  let source: SpectrumSource | null = null;
   let raf = 0;
   let running = false;
   let visible = true;
@@ -88,10 +87,11 @@ export function createChladniPlate(
   let last = 0;
   let time = 0;
   let lastPartials: readonly SpectralPartial[] = [];
+  const level = { energy: 0, tremor: 0 };
   let needsFrame = true;
 
   const setSource = (a: SpectrumSource | AnalyserNode | null) => {
-    source = a as TickedSource | null;
+    source = a;
     pa = source ? new PartialAnalyser(source) : null;
   };
   if (options?.analyser) setSource(options.analyser);
@@ -117,14 +117,15 @@ export function createChladniPlate(
     if (reducedMotion && !needsFrame) return;
     needsFrame = false;
 
-    if (source && typeof source.tick === "function") source.tick(dt);
     const partials = pa ? pa.update(dt, params.listening) : [];
     lastPartials = partials;
     const modes = model.modes(params);
     const mix = mixer.update(dt, partials, modes, params);
+    level.energy = mix.energy;
+    level.tremor = mix.tremor;
     renderer.render({
       modes,
-      amps: mix.amps,
+      coeffs: mix.coeffs,
       energy: mix.energy,
       tremor: mix.tremor,
       params,
@@ -194,6 +195,7 @@ export function createChladniPlate(
     get partials() {
       return lastPartials;
     },
+    level,
     supported: true,
   };
 

@@ -23,7 +23,7 @@ export const PRESETS: Record<string, Preset> = {
       studio: { thickness: 0.4, tension: 300 },
     },
   },
-  "classic-pivot": {
+  "classic-square-pivot": {
     label: "Classic square pivot",
     description: "Chladni's bench: centre-clamped square plate, turned-metal look.",
     params: {

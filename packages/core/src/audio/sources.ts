@@ -54,13 +54,21 @@ export class SimulatedVoice implements SpectrumSource {
   readonly frequencyBinCount = 4096;
   readonly context = { sampleRate: 48000 };
   private t = 0;
+  private lastNow: number | undefined;
   private out = new Float32Array(this.frequencyBinCount);
 
-  tick(dt: number): void {
-    this.t += dt;
+  /** set the internal clock (deterministic tests) */
+  seek(t: number): void {
+    this.t = t;
+    this.lastNow = undefined;
   }
 
   getFloatFrequencyData(array: Float32Array): void {
+    // self-clocking: advance by wall time so several plates can share one
+    // instance without it running fast
+    const now = performance.now() / 1000;
+    if (this.lastNow !== undefined) this.t += Math.min(0.1, now - this.lastNow);
+    this.lastNow = now;
     const t = this.t;
     const binHz = this.context.sampleRate / this.fftSize;
     this.out.fill(-100);

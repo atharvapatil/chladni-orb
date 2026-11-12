@@ -15,7 +15,8 @@ import {
 
 export interface RenderFrame {
   modes: readonly Mode[];
-  amps: Float32Array;
+  /** signed per-mode coefficients from ResonanceMixer */
+  coeffs: Float32Array;
   energy: number;
   tremor: number;
   params: ChladniParams;
@@ -242,9 +243,9 @@ export class Renderer {
       this.modeA[i * 4 + 2] = m.m;
       this.modeA[i * 4 + 3] = m.sign;
       this.modeB[i * 4] = m.basis === "polar" ? m.k * (p.plate.size / 200) : 0; // k·R = j_{n,m}
-      this.modeB[i * 4 + 1] = f.amps[i] ?? 0;
+      this.modeB[i * 4 + 1] = f.coeffs[i] ?? 0;
       this.modeB[i * 4 + 2] = m.freq;
-      this.modeB[i * 4 + 3] = 0;
+      this.modeB[i * 4 + 3] = m.pair;
     }
     const aspect = p.plate.shape === "rectangle" ? p.plate.aspect : 1;
     const shapeIdx = SHAPE_INDEX[p.plate.shape];

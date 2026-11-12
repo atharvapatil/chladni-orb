@@ -189,6 +189,15 @@ to start — not specified by Figura, our choice.) For **Pivot**, replace
 the point factor with a centre-clamp constraint (only the antisymmetric /
 centre-node family allowed, §2).
 
+**Degenerate pairs are summed coherently.** A polar $(\cos n\theta,
+\sin n\theta)$ pair or a rect $\pm$ pair shares $k$; summing their energies
+separately gives $\cos^2+\sin^2=1$ — angularly uniform rings regardless of
+drive point. The physical response to a point drive is the coherent
+combination $c_i \propto \phi_i(x_e,y_e)$ (unit-normalised, blended with
+$(1-e)/\sqrt2$), so the implementation emits *signed coefficients* per
+mode and the field shader accumulates pair members into a single
+$\big(\sum_i c_i\phi_i\big)^2$ term.
+
 **Tremor**: when $\max_k w_{pk}$ is below a threshold for all partials,
 skip the mode sum and add small uniform whole-plate jitter instead
 (Figura: "the sand trembles without organising", p. 8).
