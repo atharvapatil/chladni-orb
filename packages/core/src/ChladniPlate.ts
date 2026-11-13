@@ -181,10 +181,13 @@ export function createChladniPlate(
     setParams(patch) {
       const prev = params;
       params = mergeParams(params, patch);
-      // fresh sand on model or partial-count change (Figura rule)
+      // fresh sand on model or partial-count change (Figura rule), and
+      // whenever the outline changes so the grains fill the new shape
       if (
         params.plate.model !== prev.plate.model ||
-        params.listening.partials !== prev.listening.partials
+        params.listening.partials !== prev.listening.partials ||
+        params.plate.shape !== prev.plate.shape ||
+        params.plate.aspect !== prev.plate.aspect
       ) {
         renderer.resetSand();
       }

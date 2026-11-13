@@ -3,7 +3,7 @@ export type PlateDrive = "exciter" | "pivot";
 export type PlateModelKind = "studio" | "lab";
 export type Look = "textured" | "classic" | "ink";
 export type MultiTone = "physical" | "morph";
-export type Halo = "still" | "breathing";
+export type Halo = "none" | "still" | "breathing";
 
 export interface ChladniParams {
   listening: {
@@ -436,8 +436,8 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
   "look.halo": {
     label: "Halo",
     kind: "enum",
-    options: ["still", "breathing"],
-    help: "The glow around the plate can breathe with the energy of the sound.",
+    options: ["none", "still", "breathing"],
+    help: "The glow around the plate: off, steady, or breathing with the energy of the sound.",
   },
   "look.tremor": {
     label: "Tremor",

@@ -378,7 +378,7 @@ export class Renderer {
       this.loc(this.compositeProg, "uHaloAmp"),
       // the halo is radial — it only hugs a circular rim, so skip it for
       // cut-out shapes where it would float as a detached ring
-      (p.plate.shape === "circle"
+      (p.plate.shape === "circle" && p.look.halo !== "none"
         ? p.look.halo === "breathing"
           ? 0.3 + 0.7 * Math.min(1, f.energy)
           : 0.5

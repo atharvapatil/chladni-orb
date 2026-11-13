@@ -19,7 +19,8 @@ import { SegmentedControl } from "./components/SegmentedControl";
 import { Slider } from "./components/Slider";
 import { Switch } from "./components/Switch";
 import { renderSampleBuffer } from "./sample";
-import { connectingSource, readySource, settledSource } from "./stateSources";
+import { IdleOverlay } from "./IdleOverlay";
+import { SandField } from "./SandField";
 import { renderVoiceBuffer } from "./voice";
 import "./styles.css";
 
@@ -65,39 +66,33 @@ function diffParams(base: ChladniParams, cur: ChladniParams): DeepPartial<Chladn
 }
 
 const simVoice = new SimulatedVoice();
-const simCaller = new SimulatedVoice();
-simCaller.seek(3.3);
 
-// voice-agent states: each is a param patch plus a voice. Talking is the
-// everyday case; the others are small synthesised sources in stateSources.ts.
+// voice-agent states. Talking is the plate proper, driven by a voice; the
+// quiet states are particle animations (SandField) with no audio behind them.
 const PLATE_STATES = [
   {
-    id: "dormant",
-    name: "Dormant",
-    cap: "Not chosen yet — one still frame, smaller and quieter.",
+    id: "idle",
+    name: "Idle",
+    cap: "Not chosen yet — smaller and quieter, loose sand wiggling in place. No sound involved.",
     p: {},
     source: null,
-  },
-  {
-    id: "ready",
-    name: "Ready",
-    cap: "Chosen, nothing playing — a slow swell on time alone.",
-    p: {},
-    source: readySource,
+    custom: "idle",
   },
   {
     id: "connecting",
     name: "Connecting",
-    cap: "Placing the call — a pulsing ring so waiting reads as working.",
+    cap: "Placing the call — pulses spring out from the centre through the loose sand.",
     p: {},
-    source: connectingSource,
+    source: null,
+    custom: "connecting",
   },
   {
     id: "listening",
     name: "Listening",
-    cap: "The caller is speaking — the plate draws in and leans on their voice.",
-    p: { plate: { exciterAmount: 0.35 } },
-    source: simCaller,
+    cap: "The caller is speaking — pulses draw in from the rim, taking it in. No waveform shown.",
+    p: {},
+    source: null,
+    custom: "listening",
   },
   {
     id: "talking",
@@ -105,13 +100,6 @@ const PLATE_STATES = [
     cap: "The agent is speaking — partials drive the figure live.",
     p: {},
     source: simVoice,
-  },
-  {
-    id: "settled",
-    name: "Settled",
-    cap: "The call has ended — a slower, dimmer tail that stays chosen.",
-    p: { look: { exposure: 0.85 } },
-    source: settledSource,
   },
 ] as const;
 
@@ -137,8 +125,12 @@ type Theme = "dark" | "light";
 
 // the plate reads as a page element: light theme uses dark grains on a light felt
 const THEME_LOOK: Record<Theme, DeepPartial<ChladniParams>> = {
-  dark: { look: { color: "#f3ead8", plateAlpha: 1, plateColor: "#1a1a1c", amount: 1 } },
-  light: { look: { color: "#2b2520", plateAlpha: 1, plateColor: "#e9e6df", amount: 1 } },
+  dark: {
+    look: { color: "#f3ead8", plateAlpha: 1, plateColor: "#1a1a1c", amount: 1, halo: "none" },
+  },
+  light: {
+    look: { color: "#2b2520", plateAlpha: 1, plateColor: "#e9e6df", amount: 1, halo: "none" },
+  },
 };
 
 function initialTheme(): Theme {
@@ -212,11 +204,20 @@ export function App() {
     setParams(mergeParams(DEFAULT_PARAMS, p.params));
   }, []);
 
+  const idle = source === null && !frozen;
+  const idleRef = useRef(idle);
+  idleRef.current = idle;
+  useEffect(() => {
+    if (!idle) return;
+    setLevels({});
+    setStatus("idle · no voice");
+  }, [idle]);
+
   // status line follows partials each ~250 ms
   useEffect(() => {
     const id = setInterval(() => {
       const p = plateRef.current;
-      if (!p) return;
+      if (!p || idleRef.current) return;
       const n = p.partials.length;
       const lv: Record<string, number> = {};
       for (const b of LEVEL_BANDS) {
@@ -362,6 +363,42 @@ export function App() {
     if (src === "sim") pickSim();
   }, [pickSim]);
 
+  // what the stage controls set — shape, look and colours — follows down to
+  // the demo and state plates so they stay instances of the same plate
+  const stageLook = useMemo(
+    () => ({
+      plate: {
+        shape: params.plate.shape,
+        aspect: params.plate.aspect,
+        rotation: params.plate.rotation,
+      },
+      look: {
+        ...THEME_LOOK[theme].look,
+        look: params.look.look,
+        color: params.look.color,
+        plateColor: params.look.plateColor,
+      },
+    }),
+    [
+      theme,
+      params.plate.shape,
+      params.plate.aspect,
+      params.plate.rotation,
+      params.look.look,
+      params.look.color,
+      params.look.plateColor,
+    ],
+  );
+  const withStageLook = (p: DeepPartial<ChladniParams>): DeepPartial<ChladniParams> => ({
+    ...stageLook,
+    ...p,
+    plate: { ...stageLook.plate, ...p.plate },
+    look: { ...stageLook.look, ...p.look },
+  });
+  const plateRadiusStyle = {
+    "--plate-radius": params.plate.shape === "circle" ? "9999px" : `${plateRadius}px`,
+  } as CSSProperties;
+
   const copySettings = useCallback(async () => {
     const json = JSON.stringify(diffParams(DEFAULT_PARAMS, params), null, 2);
     await navigator.clipboard.writeText(json);
@@ -460,14 +497,16 @@ export function App() {
           }
         >
           <div className="stage">
-            <ChladniPlate
-              params={patch}
-              analyser={source}
-              frozen={frozen}
-              onReady={(p) => {
-                plateRef.current = p;
-              }}
-            />
+            <IdleOverlay idle={idle} params={params} count={6000}>
+              <ChladniPlate
+                params={patch}
+                analyser={source}
+                frozen={frozen}
+                onReady={(p) => {
+                  plateRef.current = p;
+                }}
+              />
+            </IdleOverlay>
             <p className="stage-cap">
               {params.look.look} · {params.plate.shape}
               {params.plate.aspect !== 1 ? ` ×${params.plate.aspect}` : ""}
@@ -667,7 +706,9 @@ export function App() {
               </div>
               <p className="pstatus">Mirrors the stage: palette, shape, state and voice.</p>
               <div className="pstage">
-                <ChladniPlate params={patch} analyser={previewAnalyser} />
+                <IdleOverlay idle={previewAnalyser === null} params={params} count={3000}>
+                  <ChladniPlate params={patch} analyser={previewAnalyser} />
+                </IdleOverlay>
               </div>
             </div>
             <div className="pcard">
@@ -706,17 +747,12 @@ export function App() {
           <span className="eyebrow">02 · Inside</span>How the plate is built
         </h2>
         <p className="sec-sub">Four views, each one live with the same simulated voice.</p>
-        <div className="how">
+        <div className="how" style={plateRadiusStyle}>
           {demos.map((d, i) => (
             <figure key={i}>
               <span className="stepnum">{i + 1}</span>
               <ChladniPlate
-                params={
-                  {
-                    ...d.p,
-                    look: { ...THEME_LOOK[theme].look, ...(d.p as { look?: object }).look },
-                  } as DeepPartial<ChladniParams>
-                }
+                params={withStageLook(d.p as DeepPartial<ChladniParams>)}
                 analyser={simVoice}
               />
               <figcaption>
@@ -736,23 +772,27 @@ export function App() {
         </p>
 
         <h2 id="states" className="sec">
-          <span className="eyebrow">03 · States</span>Six states
+          <span className="eyebrow">03 · States</span>Four states
         </h2>
         <p className="sec-sub">
-          The same plate in each state. Talking and listening run on simulated voices here.
+          The same plate in each state. Only Talking runs on a voice — a simulated one here.
         </p>
-        <div className="how">
+        <div className="how" style={plateRadiusStyle}>
           {PLATE_STATES.map((s) => (
-            <figure key={s.id} className={s.id === "dormant" ? "dormant" : ""}>
-              <ChladniPlate
-                params={
-                  {
-                    ...s.p,
-                    look: { ...THEME_LOOK[theme].look, ...(s.p as { look?: object }).look },
-                  } as DeepPartial<ChladniParams>
-                }
-                analyser={s.source}
-              />
+            <figure key={s.id} className={`state-${s.id}`}>
+              {"custom" in s ? (
+                <SandField
+                  sand={params.look.color}
+                  plate={params.look.plateColor}
+                  shape={params.plate.shape}
+                  mode={s.custom}
+                />
+              ) : (
+                <ChladniPlate
+                  params={withStageLook(s.p as DeepPartial<ChladniParams>)}
+                  analyser={s.source}
+                />
+              )}
               <figcaption>
                 <b>{s.name}</b>
                 {s.cap}
