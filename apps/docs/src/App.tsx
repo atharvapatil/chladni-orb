@@ -14,7 +14,12 @@ import {
   type SpectrumSource,
 } from "@chladni/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Button } from "./components/Button";
+import { SegmentedControl } from "./components/SegmentedControl";
+import { Slider } from "./components/Slider";
+import { Switch } from "./components/Switch";
 import { renderSampleBuffer } from "./sample";
+import { connectingSource, readySource, settledSource } from "./stateSources";
 import { renderVoiceBuffer } from "./voice";
 import "./styles.css";
 
@@ -60,6 +65,55 @@ function diffParams(base: ChladniParams, cur: ChladniParams): DeepPartial<Chladn
 }
 
 const simVoice = new SimulatedVoice();
+const simCaller = new SimulatedVoice();
+simCaller.seek(3.3);
+
+// voice-agent states: each is a param patch plus a voice. Talking is the
+// everyday case; the others are small synthesised sources in stateSources.ts.
+const PLATE_STATES = [
+  {
+    id: "dormant",
+    name: "Dormant",
+    cap: "Not chosen yet — one still frame, smaller and quieter.",
+    p: {},
+    source: null,
+  },
+  {
+    id: "ready",
+    name: "Ready",
+    cap: "Chosen, nothing playing — a slow swell on time alone.",
+    p: {},
+    source: readySource,
+  },
+  {
+    id: "connecting",
+    name: "Connecting",
+    cap: "Placing the call — a pulsing ring so waiting reads as working.",
+    p: {},
+    source: connectingSource,
+  },
+  {
+    id: "listening",
+    name: "Listening",
+    cap: "The caller is speaking — the plate draws in and leans on their voice.",
+    p: { plate: { exciterAmount: 0.35 } },
+    source: simCaller,
+  },
+  {
+    id: "talking",
+    name: "Talking",
+    cap: "The agent is speaking — partials drive the figure live.",
+    p: {},
+    source: simVoice,
+  },
+  {
+    id: "settled",
+    name: "Settled",
+    cap: "The call has ended — a slower, dimmer tail that stays chosen.",
+    p: { look: { exposure: 0.85 } },
+    source: settledSource,
+  },
+] as const;
 
 // live-level bands for the side card; Voice is the telephone speech band
 const LEVEL_BANDS = [
@@ -359,17 +413,18 @@ export function App() {
         <nav>
           <a href="#tune">Tune</a>
           <a href="#inside">How it works</a>
+          <a href="#states">States</a>
           <a href="#presets">Presets</a>
           <a href="#use">Use it</a>
         </nav>
         <div className="nav-right">
           <a href="https://github.com/<user>/chladni">GitHub</a>
-          <button
+          <Button
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             onClick={toggleTheme}
           >
             {theme === "dark" ? "☀ Light" : "☾ Dark"}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -422,91 +477,77 @@ export function App() {
           <div className="stage-row">
             <div className="segctl">
               <span>Voice</span>
-              <span className="seg">
-                <button className={sourceName === "none" ? "active" : ""} onClick={stopSource}>
-                  Off
-                </button>
-                <button
-                  className={sourceName === "sample" ? "active" : ""}
-                  onClick={() => void pickSample()}
-                >
-                  Sample
-                </button>
-                <button
-                  className={sourceName === "microphone" ? "active" : ""}
-                  onClick={() => void pickMic()}
-                >
-                  Microphone
-                </button>
-                <button
-                  className={sourceName.startsWith("file") ? "active" : ""}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  Your file
-                </button>
-                <button
-                  className={sourceName === "simulated voice" ? "active" : ""}
-                  onClick={pickSim}
-                >
-                  Simulated voice
-                </button>
-              </span>
+              <SegmentedControl
+                ariaLabel="Voice source"
+                options={[
+                  { value: "none", label: "Off" },
+                  { value: "sample", label: "Sample" },
+                  { value: "microphone", label: "Microphone" },
+                  { value: "file", label: "Your file" },
+                  { value: "simulated voice", label: "Simulated voice" },
+                ]}
+                value={
+                  sourceName === "none"
+                    ? "none"
+                    : sourceName.startsWith("file")
+                      ? "file"
+                      : sourceName
+                }
+                onChange={(v) => {
+                  if (v === "none") stopSource();
+                  else if (v === "sample") void pickSample();
+                  else if (v === "microphone") void pickMic();
+                  else if (v === "file") fileRef.current?.click();
+                  else void pickSim();
+                }}
+              />
             </div>
             <span className="row-actions">
-              <button onClick={() => plateRef.current?.resetSand()}>Reset sand</button>
-              <button className={frozen ? "primary" : ""} onClick={() => setFrozen((f) => !f)}>
+              <Button onClick={() => plateRef.current?.resetSand()}>Reset sand</Button>
+              <Button variant={frozen ? "primary" : "default"} onClick={() => setFrozen((f) => !f)}>
                 {frozen ? "Unfreeze" : "Freeze"}
-              </button>
+              </Button>
             </span>
           </div>
 
           <div className="stage-grid">
             <div className="segctl">
               <span>Shape</span>
-              <span className="seg">
-                {(["circle", "square", "diamond"] as const).map((s) => (
-                  <button
-                    key={s}
-                    className={params.plate.shape === s ? "active" : ""}
-                    onClick={() =>
-                      applyPatch({
-                        plate: {
-                          shape: s,
-                          rotation: s === "circle" ? params.plate.rotation : 0,
-                          ...(s === "diamond" ? { aspect: 1 } : {}),
-                        },
-                      })
-                    }
-                  >
-                    {s}
-                  </button>
-                ))}
-              </span>
+              <SegmentedControl
+                ariaLabel="Plate shape"
+                options={["circle", "square", "diamond"]}
+                value={params.plate.shape}
+                onChange={(s) =>
+                  applyPatch({
+                    plate: {
+                      shape: s,
+                      rotation: s === "circle" ? params.plate.rotation : 0,
+                      ...(s === "diamond" ? { aspect: 1 } : {}),
+                    },
+                  })
+                }
+              />
             </div>
             <div className="segctl">
               <span>Look</span>
-              <span className="seg">
-                {(["textured", "classic", "ink"] as const).map((l) => (
-                  <button
-                    key={l}
-                    className={params.look.look === l ? "active" : ""}
-                    onClick={() => applyPatch({ look: { look: l } })}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </span>
+              <SegmentedControl
+                ariaLabel="Plate look"
+                options={["textured", "classic", "ink"]}
+                value={params.look.look}
+                onChange={(l) => applyPatch({ look: { look: l } })}
+              />
             </div>
             <div className="segctl">
               <span>Size</span>
               <label className="minislider">
-                <input
-                  type="range"
+                <Slider
+                  ariaLabel="Plate size"
                   min={128}
                   max={320}
                   step={1}
                   value={plateSize}
-                  onChange={(e) => setPlateSize(Number(e.target.value))}
+                  onChange={setPlateSize}
+                  width={110}
                 />
                 {plateSize}px
               </label>
@@ -515,13 +556,14 @@ export function App() {
               <div className="segctl">
                 <span>Radius</span>
                 <label className="minislider">
-                  <input
-                    type="range"
+                  <Slider
+                    ariaLabel="Plate corner radius"
                     min={0}
                     max={32}
                     step={1}
                     value={plateRadius}
-                    onChange={(e) => setPlateRadius(Number(e.target.value))}
+                    onChange={setPlateRadius}
+                    width={110}
                   />
                   {plateRadius}px
                 </label>
@@ -572,7 +614,7 @@ export function App() {
               settings to share a look.
             </p>
             <div className="tune-actions">
-              <button
+              <Button
                 onClick={() => {
                   setParams(DEFAULT_PARAMS);
                   setPatch({});
@@ -580,10 +622,10 @@ export function App() {
                 }}
               >
                 Reset
-              </button>
-              <button onClick={() => void copySettings()}>
+              </Button>
+              <Button onClick={() => void copySettings()}>
                 {copied ? "Copied" : "Copy settings"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -616,12 +658,12 @@ export function App() {
             <div className="pcard">
               <div className="pcard-head">
                 <b>Preview</b>
-                <button
-                  className={previewAnalyser ? "primary" : ""}
+                <Button
+                  variant={previewAnalyser ? "primary" : "default"}
                   onClick={() => void togglePreview()}
                 >
                   {previewAnalyser ? "Stop" : "▶ Play"}
-                </button>
+                </Button>
               </div>
               <p className="pstatus">Mirrors the stage: palette, shape, state and voice.</p>
               <div className="pstage">
@@ -693,8 +735,34 @@ export function App() {
           down its gradient until only the nodal lines hold sand.
         </p>
 
+        <h2 id="states" className="sec">
+          <span className="eyebrow">03 · States</span>Six states
+        </h2>
+        <p className="sec-sub">
+          The same plate in each state. Talking and listening run on simulated voices here.
+        </p>
+        <div className="how">
+          {PLATE_STATES.map((s) => (
+            <figure key={s.id} className={s.id === "dormant" ? "dormant" : ""}>
+              <ChladniPlate
+                params={
+                  {
+                    ...s.p,
+                    look: { ...THEME_LOOK[theme].look, ...(s.p as { look?: object }).look },
+                  } as DeepPartial<ChladniParams>
+                }
+                analyser={s.source}
+              />
+              <figcaption>
+                <b>{s.name}</b>
+                {s.cap}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
         <h2 id="presets" className="sec">
-          <span className="eyebrow">03 · Presets</span>Presets
+          <span className="eyebrow">04 · Presets</span>Presets
         </h2>
         <p className="sec-sub">Starter scenes — pick one, then make it yours in Tune.</p>
         <div className="presets">
@@ -716,7 +784,7 @@ export function App() {
         </div>
 
         <h2 id="use" className="sec">
-          <span className="eyebrow">04 · Use it</span>Use it in your project
+          <span className="eyebrow">05 · Use it</span>Use it in your project
         </h2>
         <p className="sec-sub">
           A React component over a plain-TypeScript engine — install and give it any AnalyserNode.
@@ -799,13 +867,13 @@ function Control({
             {entry.unit ? ` ${entry.unit}` : ""}
           </span>
         </span>
-        <input
-          type="range"
-          min={entry.min}
-          max={entry.max}
-          step={entry.step}
+        <Slider
+          ariaLabel={entry.label}
+          min={entry.min ?? 0}
+          max={entry.max ?? 1}
+          step={entry.step ?? 1}
           value={v}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={onChange}
         />
       </label>
     );
@@ -821,27 +889,24 @@ function Control({
             </span>
           </span>
         </span>
-        <span className="seg">
-          {entry.options!.map((o) => (
-            <button key={o} className={value === o ? "active" : ""} onClick={() => onChange(o)}>
-              {o}
-            </button>
-          ))}
-        </span>
+        <SegmentedControl
+          ariaLabel={entry.label}
+          options={entry.options!}
+          value={String(value)}
+          onChange={onChange}
+        />
       </label>
     );
   }
   if (entry.kind === "boolean") {
     return (
-      <label className="ctl" title={entry.help}>
-        <input
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(e) => onChange(e.target.checked)}
-        />{" "}
-        {entry.label}{" "}
-        <span className="tip" data-tip={entry.help}>
-          ⓘ
+      <label className="ctl bool" title={entry.help}>
+        <Switch checked={Boolean(value)} onChange={onChange} ariaLabel={entry.label} />
+        <span>
+          {entry.label}{" "}
+          <span className="tip" data-tip={entry.help}>
+            ⓘ
+          </span>
         </span>
       </label>
     );
