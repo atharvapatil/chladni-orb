@@ -35,6 +35,26 @@
   --oss-dot: #34a853;
 }
 
+/* ---------- type ----------
+   Geist for text, Geist Mono for code and numbers. One scale, used
+   everywhere: xs 11 · sm 12 · base 14 · md 16 · lg 20 · xl 28 · 2xl 40 · 3xl 56 */
+:root {
+  --font-sans: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+  --fs-2xl: 40px;
+  --fs-3xl: 56px;
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -47,11 +67,18 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01";
+}
+
+h1,
+h2,
+h3 {
+  line-height: var(--lh-tight);
+  letter-spacing: -0.02em;
 }
 
 main {
@@ -76,7 +103,7 @@ main {
 
 .nav .brand {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--text);
   text-decoration: none;
   letter-spacing: 0.01em;
@@ -91,7 +118,7 @@ main {
 .nav nav a {
   color: var(--secondary);
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .nav nav a:hover {
@@ -108,7 +135,7 @@ main {
 .nav-right a {
   color: var(--secondary);
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .nav-right a:hover {
@@ -125,7 +152,7 @@ main {
   background: var(--panel);
   border-radius: 9999px;
   padding: 4px 11px;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--secondary);
   margin: 0 0 22px;
 }
@@ -137,25 +164,36 @@ main {
   background: var(--oss-dot);
 }
 
+.hero {
+  padding: 24px 0 36px;
+}
+
 .hero h1 {
-  font-size: 54px;
-  font-weight: 300;
-  letter-spacing: -0.03em;
-  margin: 0 0 16px;
+  font-size: var(--fs-3xl);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  max-width: 18ch;
+  margin: 0 0 18px;
 }
 
 .tagline {
   color: var(--secondary);
-  font-size: 16.5px;
-  line-height: 1.6;
-  max-width: 52ch;
+  font-size: var(--fs-md);
+  line-height: var(--lh-relaxed);
+  max-width: 58ch;
   margin: 0 0 26px;
+}
+
+.tagline b {
+  color: var(--text);
+  font-weight: 500;
 }
 
 .hero-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -163,10 +201,51 @@ main {
   text-decoration: none;
 }
 
-.credit {
+/* install one-liner: mono command with a copy button */
+.install {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.install span {
   color: var(--secondary);
-  font-size: 12.5px;
-  margin: 0 0 8px;
+}
+
+.install .ui-btn {
+  height: 24px;
+  padding: 0 8px;
+  font-size: var(--fs-xs);
+}
+
+.hero-meta {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--secondary);
+  font-size: var(--fs-sm);
+}
+
+.hero-meta li::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tertiary);
+  margin-right: 8px;
+  vertical-align: middle;
 }
 
 /* ---------- buttons (Figma: Button set) ---------- */
@@ -183,7 +262,7 @@ main {
   border: 1px solid var(--edge);
   border-radius: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
@@ -227,7 +306,7 @@ main {
 }
 
 .segctl > span {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--secondary);
   letter-spacing: 0.02em;
 }
@@ -249,7 +328,7 @@ main {
   border-radius: 9999px;
   padding: 5px 13px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
 }
@@ -325,7 +404,7 @@ main {
 
 .stage-cap {
   color: var(--secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -356,7 +435,7 @@ main {
   align-items: center;
   gap: 8px;
   color: var(--secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -472,7 +551,7 @@ main {
   background: var(--panel);
   color: var(--text);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
 }
 
@@ -499,7 +578,7 @@ main {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--secondary);
 }
 
@@ -516,7 +595,7 @@ main {
 .status {
   font-variant-numeric: tabular-nums;
   color: var(--secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   min-height: 1.2em;
 }
 
@@ -532,13 +611,13 @@ main {
 }
 
 h2.sec {
-  font-size: 38px;
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  margin: 72px 0 6px;
+  font-size: var(--fs-2xl);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  margin: 88px 0 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sec-head h2.sec {
@@ -546,7 +625,7 @@ h2.sec {
 }
 
 .eyebrow {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -560,13 +639,23 @@ h2.sec {
 
 .sec-sub {
   color: var(--secondary);
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: var(--fs-md);
+  line-height: var(--lh-relaxed);
+  max-width: 64ch;
   margin: 0 0 12px;
 }
 
 main > .sec-sub {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
+}
+
+.sec-sub a {
+  color: var(--text);
+}
+
+.sec-sub b {
+  color: var(--text);
+  font-weight: 500;
 }
 
 .tune-actions {
@@ -601,13 +690,13 @@ main > .sec-sub {
 
 .gside b {
   display: block;
-  font-size: 14px;
+  font-size: var(--fs-base);
   margin-bottom: 4px;
 }
 
 .gside p {
   color: var(--secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   margin: 0;
 }
@@ -620,7 +709,7 @@ main > .sec-sub {
 
 .ctl {
   display: block;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   margin: 7px 0;
 }
 
@@ -638,8 +727,8 @@ main > .sec-sub {
 .ctl .val {
   color: var(--secondary);
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 11.5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
 }
 
 .ctl .ui-seg {
@@ -658,7 +747,7 @@ main > .sec-sub {
   position: relative;
   color: var(--secondary);
   cursor: help;
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .tip::before {
@@ -687,7 +776,7 @@ main > .sec-sub {
   text-align: left;
   background: var(--text);
   color: var(--bg);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 400;
   line-height: 1.45;
   padding: 7px 10px;
@@ -722,7 +811,7 @@ main > .sec-sub {
 
 .pcard > b {
   display: block;
-  font-size: 13px;
+  font-size: var(--fs-base);
   margin-bottom: 10px;
 }
 
@@ -734,7 +823,7 @@ main > .sec-sub {
 }
 
 .pcard-head b {
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .pcard-head .ui-btn {
@@ -754,7 +843,7 @@ main > .sec-sub {
 
 .pstatus {
   color: var(--secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   margin: 0;
   font-variant-numeric: tabular-nums;
@@ -764,7 +853,7 @@ main > .sec-sub {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   margin: 7px 0;
   font-variant-numeric: tabular-nums;
 }
@@ -795,7 +884,7 @@ main > .sec-sub {
   width: 30px;
   text-align: right;
   color: var(--secondary);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 /* ---------- how it works ---------- */
@@ -820,8 +909,8 @@ main > .sec-sub {
   top: 12px;
   left: 14px;
   z-index: 1;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 11.5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   color: var(--accent);
 }
 
@@ -833,7 +922,7 @@ main > .sec-sub {
 }
 
 .how figcaption {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--secondary);
   margin-top: 8px;
   line-height: 1.45;
@@ -842,7 +931,7 @@ main > .sec-sub {
 .how figcaption b {
   display: block;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-base);
   margin-bottom: 2px;
 }
 
@@ -851,9 +940,158 @@ main > .sec-sub {
   transform: scale(0.92);
 }
 
+.how figure .state-tag {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--tertiary);
+}
+
+footer a {
+  color: var(--secondary);
+  text-decoration: none;
+}
+
+footer a:hover {
+  color: var(--text);
+}
+
+/* ---------- reference ---------- */
+
+.ref-h {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  margin: 22px 0 10px;
+  color: var(--text);
+}
+
+.ref-h code,
+.props code,
+.sec-sub code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--seg-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.ref-example {
+  margin: 0 0 16px;
+}
+
+.props {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-base);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.props th,
+.props td {
+  text-align: left;
+  vertical-align: top;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.props th {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  font-weight: 500;
+  background: var(--seg-bg);
+}
+
+.props tr:last-child td {
+  border-bottom: 0;
+}
+
+.props td:nth-child(4) {
+  color: var(--secondary);
+  line-height: 1.45;
+}
+
+.ref-label {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--fs-xs);
+  color: var(--tertiary);
+}
+
+@media (max-width: 720px) {
+  .props,
+  .props thead,
+  .props tbody,
+  .props tr,
+  .props td {
+    display: block;
+  }
+  .props thead {
+    display: none;
+  }
+  .props td {
+    border-bottom: 0;
+    padding: 4px 12px;
+  }
+  .props tr {
+    border-bottom: 1px solid var(--edge);
+    padding: 8px 0;
+  }
+}
+
+/* ---------- faq ---------- */
+
+.faq {
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 0 18px;
+  margin-bottom: 10px;
+}
+
+.faq summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::after {
+  content: "+";
+  color: var(--secondary);
+  font-weight: 400;
+  font-size: var(--fs-lg);
+}
+
+.faq[open] summary::after {
+  content: "–";
+}
+
+.faq > :not(summary) {
+  margin-bottom: 16px;
+}
+
+.faq .pipeline {
+  margin-top: 0;
+}
+
 .pipeline {
   color: var(--secondary);
-  font-size: 14px;
+  font-size: var(--fs-base);
   line-height: 1.7;
   max-width: 70ch;
 }
@@ -887,12 +1125,12 @@ main > .sec-sub {
 
 .preset-card b {
   display: block;
-  font-size: 14px;
+  font-size: var(--fs-base);
   margin-bottom: 4px;
 }
 
 .preset-card span {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--secondary);
   line-height: 1.35;
   display: block;
@@ -905,27 +1143,85 @@ main > .sec-sub {
   margin-bottom: 10px;
 }
 
-/* ---------- use it ---------- */
+/* ---------- quick start ---------- */
 
-.useit .step {
+.quick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.quick .step {
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  margin: 16px 0;
   border: 1px solid var(--edge);
   border-radius: 14px;
   background: var(--panel);
   padding: 18px;
 }
 
-.useit .step > div {
+.quick .step.wide {
+  grid-column: 1 / -1;
+}
+
+.quick .step > div {
   flex: 1;
   min-width: 0;
 }
 
+.quick h3 {
+  font-size: var(--fs-md);
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+
+.quick .step p {
+  color: var(--secondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  margin: 0 0 12px;
+}
+
+.step-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.step-head .ui-btn {
+  height: 26px;
+  font-size: var(--fs-sm);
+  flex-shrink: 0;
+}
+
+.snippet-tabs {
+  margin-bottom: 10px;
+}
+
+/* a live snippet reflects the stage; the badge says so */
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--secondary);
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+.live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--oss-dot);
+}
+
 .stepnum {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   color: var(--accent);
   border: 1px solid var(--edge);
   border-radius: 9999px;
@@ -938,24 +1234,19 @@ main > .sec-sub {
   margin-top: 2px;
 }
 
-.useit h3 {
-  font-size: 14px;
-  margin: 0 0 8px;
-}
-
 pre {
   background: var(--seg-bg);
   border: 1px solid var(--edge);
   border-radius: 10px;
   padding: 14px;
   overflow-x: auto;
-  font-size: 12.5px;
-  line-height: 1.55;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
   margin: 0;
 }
 
 code {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 footer {
@@ -963,8 +1254,12 @@ footer {
   margin: 0 auto;
   padding: 32px 24px 40px;
   border-top: 1px solid var(--edge);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   color: var(--secondary);
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 @media (max-width: 900px) {
@@ -986,11 +1281,20 @@ footer {
 
 @media (max-width: 720px) {
   .hero h1 {
-    font-size: 40px;
+    font-size: var(--fs-2xl);
   }
 
   h2.sec {
-    font-size: 30px;
+    font-size: var(--fs-xl);
+  }
+
+  .quick {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-meta {
+    flex-direction: column;
+    gap: 8px;
   }
 
   .nav nav {

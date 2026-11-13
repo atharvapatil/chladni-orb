@@ -25,6 +25,99 @@ import { renderVoiceBuffer } from "./voice";
 import "./styles.css";
 
 const GROUP_ORDER = ["listening", "plate", "studio", "lab", "look", "ink"] as const;
+
+// <ChladniPlate /> props, for the reference table (mirrors ChladniPlateProps)
+const COMPONENT_PROPS = [
+  {
+    name: "params",
+    type: "DeepPartial<ChladniParams>",
+    def: "DEFAULT_PARAMS",
+    desc: "The plate's settings. Merged over DEFAULT_PARAMS on every change and deep-compared, so pass a fresh object freely; removing a key resets it to the default.",
+  },
+  {
+    name: "analyser",
+    type: "SpectrumSource | AnalyserNode | null",
+    def: "null",
+    desc: "What the plate listens to: a Web Audio AnalyserNode, anything implementing SpectrumSource (e.g. SimulatedVoice), or null for silence.",
+  },
+  {
+    name: "frozen",
+    type: "boolean",
+    def: "false",
+    desc: "Hold the current figure and stop listening (same as listening.freeze).",
+  },
+  {
+    name: "pixelRatio",
+    type: "number",
+    def: "min(devicePixelRatio, 2)",
+    desc: "Cap on the render resolution multiplier. Lower it for cheaper frames on dense screens.",
+  },
+  {
+    name: "fieldResolution",
+    type: "number",
+    def: "256",
+    desc: "Size of the vibration-field texture (N×N). Higher is sharper nodal lines, costlier.",
+  },
+  {
+    name: "particleTexSize",
+    type: "number",
+    def: "256",
+    desc: "Side of the particle texture; the plate carries up to N² grains (65,536 at 256). look.amount scales how many are drawn.",
+  },
+  {
+    name: "onReady",
+    type: "(plate: ChladniPlate) => void",
+    def: "—",
+    desc: "Called once with the imperative handle (setParams, setAnalyser, freeze, reset, resetSand, start, stop, destroy, partials, level, supported).",
+  },
+  {
+    name: "ref",
+    type: "Ref<ChladniPlate | null>",
+    def: "—",
+    desc: "The same handle as onReady, via a ref. useChladniPlate() is the hook form.",
+  },
+  {
+    name: "…canvas props",
+    type: "CanvasHTMLAttributes",
+    def: "—",
+    desc: "className, style, aria-*, etc. are forwarded to the <canvas>. Size it with CSS; the plate follows via ResizeObserver.",
+  },
+];
+
+function paramType(e: ParamSchemaEntry): string {
+  if (e.kind === "enum") return (e.options ?? []).map((o) => `"${o}"`).join(" | ");
+  if (e.kind === "boolean") return "boolean";
+  if (e.kind === "color") return "string (hex / hsl)";
+  const range = e.min !== undefined && e.max !== undefined ? ` ${e.min}..${e.max}` : "";
+  return `number${range}${e.unit ? ` ${e.unit}` : ""}`;
+}
+
+const FAQ = [
+  {
+    q: "What does the plate need from the browser?",
+    a: "WebGL2 with EXT_color_buffer_float (or the half-float fallback). Without it the component paints a flat plate colour and reports supported: false on its handle. Microphone input additionally needs a secure context (https or localhost) and a user gesture to start the AudioContext.",
+  },
+  {
+    q: "How do I drive it from a real call?",
+    a: "Give analyser any Web Audio AnalyserNode — createMicAnalyser() for the caller, createElementAnalyser(audioEl) for playback, or your own node on the agent's output stream. fftSize 8192 and smoothing ≈ 0.5 work well. Switch analyser (or pass null) as the call changes state; the plate crossfades through its decay.",
+  },
+  {
+    q: "Which parameters matter most for speech?",
+    a: "listening.partials (how many peaks reach the plate), listening.decay (how long a figure lingers after a syllable), listening.floor (silence threshold) and plate.exciterAmount / exciterX / exciterY (which modes a voice can reach). The Voice preset is a good starting point.",
+  },
+  {
+    q: "Why does the figure sometimes shake instead of forming lines?",
+    a: "That is tremor: the dominant partial sits far from every resonance of the plate, so the whole plate shakes rather than a mode standing up. It is physical and intentional; turn it off with look.tremor: false, or change plate size/material so resonances land nearer the voice.",
+  },
+  {
+    q: "Studio or Lab model?",
+    a: "Studio is a stretched membrane with some stiffness — fast, forgiving, good for UI. Lab solves a real free-edge plate (exact circle, Rayleigh–Ritz rectangle) in physical units; it takes a moment to solve when its inputs change and is there for people who want aluminium to behave like aluminium.",
+  },
+  {
+    q: "Can several plates share one voice?",
+    a: "Yes. SimulatedVoice and AnalyserNodes can be passed to any number of plates; each keeps its own sand. The demos on this page all share one simulated voice.",
+  },
+];
 const GROUP_LABEL: Record<string, string> = {
   listening: "Listening",
   plate: "Plate",
@@ -53,6 +146,16 @@ function setPath(p: DeepPartial<ChladniParams>, path: string, value: unknown): v
   (rec[g!] ??= {})[k!] = value;
 }
 
+/** JS object-literal source (unquoted keys) for a params patch. */
+function toJs(v: unknown, indent: number, depth = 0): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  const entries = Object.entries(v as Record<string, unknown>);
+  if (entries.length === 0) return "{}";
+  const pad = " ".repeat(indent * (depth + 1));
+  const end = " ".repeat(indent * depth);
+  return `{\n${entries.map(([k, x]) => `${pad}${k}: ${toJs(x, indent, depth + 1)},`).join("\n")}\n${end}}`;
+}
+
 function diffParams(base: ChladniParams, cur: ChladniParams): DeepPartial<ChladniParams> {
   const diff: Record<string, Record<string, unknown>> = {};
   for (const g of Object.keys(base) as (keyof ChladniParams)[]) {
@@ -73,7 +176,8 @@ const PLATE_STATES = [
   {
     id: "idle",
     name: "Idle",
-    cap: "Not chosen yet — smaller and quieter, loose sand wiggling in place. No sound involved.",
+    cap: "No call yet. Loose sand shivering in place — alive, but clearly not listening.",
+    code: '<SandField mode="idle" />',
     p: {},
     source: null,
     custom: "idle",
@@ -81,7 +185,8 @@ const PLATE_STATES = [
   {
     id: "connecting",
     name: "Connecting",
-    cap: "Placing the call — pulses spring out from the centre through the loose sand.",
+    cap: "Placing the call. Pulses spring out from the centre so waiting reads as working.",
+    code: '<SandField mode="connecting" />',
     p: {},
     source: null,
     custom: "connecting",
@@ -89,7 +194,8 @@ const PLATE_STATES = [
   {
     id: "listening",
     name: "Listening",
-    cap: "The caller is speaking — pulses draw in from the rim, taking it in. No waveform shown.",
+    cap: "The caller is speaking. Pulses draw in from the rim — taking it in, no waveform.",
+    code: '<SandField mode="listening" />',
     p: {},
     source: null,
     custom: "listening",
@@ -97,7 +203,8 @@ const PLATE_STATES = [
   {
     id: "talking",
     name: "Talking",
-    cap: "The agent is speaking — partials drive the figure live.",
+    cap: "The agent is speaking. Its partials drive the plate's modes and the figure forms live.",
+    code: "<ChladniPlate analyser={agent} />",
     p: {},
     source: simVoice,
   },
@@ -161,7 +268,8 @@ export function App() {
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [previewAnalyser, setPreviewAnalyser] = useState<AnalyserNode | null>(null);
   const previewRef = useRef<{ ctx: AudioContext; src: AudioBufferSourceNode | null } | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [snippetLang, setSnippetLang] = useState<"react" | "vanilla">("react");
   const [status, setStatus] = useState("warming up");
   const plateRef = useRef<ChladniPlateHandle | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
@@ -197,12 +305,22 @@ export function App() {
     if (look) applyPatch({ look });
   }, [theme, applyPatch]);
 
-  const applyPreset = useCallback((key: string) => {
-    const p = PRESETS[key];
-    if (!p) return;
-    setPatch(p.params);
-    setParams(mergeParams(DEFAULT_PARAMS, p.params));
-  }, []);
+  // load a fresh param set (preset or factory defaults) under the page theme
+  const loadParams = useCallback(
+    (p: DeepPartial<ChladniParams>) => {
+      const next = mergeParams(mergeParams(DEFAULT_PARAMS, THEME_LOOK[theme]), p);
+      setParams(next);
+      setPatch(diffParams(DEFAULT_PARAMS, next));
+    },
+    [theme],
+  );
+  const applyPreset = useCallback(
+    (key: string) => {
+      const p = PRESETS[key];
+      if (p) loadParams(p.params);
+    },
+    [loadParams],
+  );
 
   const idle = source === null && !frozen;
   const idleRef = useRef(idle);
@@ -399,12 +517,61 @@ export function App() {
     "--plate-radius": params.plate.shape === "circle" ? "9999px" : `${plateRadius}px`,
   } as CSSProperties;
 
-  const copySettings = useCallback(async () => {
-    const json = JSON.stringify(diffParams(DEFAULT_PARAMS, params), null, 2);
-    await navigator.clipboard.writeText(json);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }, [params]);
+  const copyText = useCallback(async (text: string, key: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+  }, []);
+
+  // the quick-start snippet follows the stage + Tune panel: whatever differs
+  // from the defaults (ignoring the page theme's palette) becomes `params`
+  const tunedPatch = useMemo(
+    () => diffParams(mergeParams(DEFAULT_PARAMS, THEME_LOOK[theme]), params),
+    [params, theme],
+  );
+  const snippet = useMemo(() => {
+    const p = toJs(tunedPatch, 2);
+    const hasParams = p !== "{}";
+    const kind = sourceName.startsWith("file")
+      ? "sample"
+      : sourceName === "sample" || sourceName === "simulated voice"
+        ? sourceName
+        : "microphone";
+    const [sourceLine, analyserExpr] = {
+      microphone: [
+        "const mic = await createMicAnalyser(); // or any AnalyserNode — see step 2",
+        "mic.analyser",
+      ],
+      sample: [
+        "const sample = createElementAnalyser(audioEl); // any <audio> / <video> element",
+        "sample.analyser",
+      ],
+      "simulated voice": [
+        "const voice = new SimulatedVoice(); // demo source, no audio needed",
+        "voice",
+      ],
+    }[kind];
+    const helper = {
+      microphone: "createMicAnalyser",
+      sample: "createElementAnalyser",
+      "simulated voice": "SimulatedVoice",
+    }[kind];
+    if (snippetLang === "react") {
+      return `import { ChladniPlate, ${helper} } from "@chladni/react";
+
+${sourceLine}
+
+<ChladniPlate
+  analyser={${analyserExpr}}${hasParams ? `\n  params={${p.replace(/\n/g, "\n  ")}}` : ""}
+  style={{ width: ${plateSize}, height: ${plateSize} }}
+/>`;
+    }
+    return `import { createChladniPlate, ${helper} } from "@chladni/core";
+
+${sourceLine}
+const plate = createChladniPlate(document.querySelector("canvas")${hasParams ? `, {\n  params: ${p.replace(/\n/g, "\n  ")},\n}` : ""});
+plate.setAnalyser(${analyserExpr});`;
+  }, [tunedPatch, snippetLang, sourceName, plateSize]);
 
   const groups = useMemo(() => {
     const g: Record<string, [string, ParamSchemaEntry][]> = {};
@@ -448,11 +615,12 @@ export function App() {
           chladni
         </a>
         <nav>
-          <a href="#tune">Tune</a>
-          <a href="#inside">How it works</a>
+          <a href="#use">Quick start</a>
           <a href="#states">States</a>
           <a href="#presets">Presets</a>
-          <a href="#use">Use it</a>
+          <a href="#tune">Tune</a>
+          <a href="#props">Props</a>
+          <a href="#faq">FAQ</a>
         </nav>
         <div className="nav-right">
           <a href="https://github.com/<user>/chladni">GitHub</a>
@@ -469,22 +637,34 @@ export function App() {
         <section className="hero">
           <p className="oss">
             <i />
-            Open source · MIT
+            Open source · MIT · React + vanilla TS
           </p>
-          <h1>chladni</h1>
+          <h1>A voice-reactive Chladni plate for the web.</h1>
           <p className="tagline">
-            A voice-reactive Chladni plate for the web — sound in, sand figures out. Play any voice
-            through it, tune the look, take the code.
+            Sound in, sand figures out. Hand <b>&lt;ChladniPlate /&gt;</b> any Web Audio
+            AnalyserNode — a microphone, a call, a TTS stream — and it draws the voice as the
+            standing-wave figures of a vibrating plate. Built as a visual presence for{" "}
+            <b>AI voice agents</b>: idle, connecting, listening, talking.
           </p>
           <div className="hero-actions">
-            <a className="btn primary" href="https://github.com/<user>/chladni">
-              Get the code →
+            <a className="btn primary" href="#use">
+              Quick start →
             </a>
-            <a className="btn" href="#inside">
-              How it works
+            <span className="install">
+              <span>$</span>npm i @chladni/react
+              <Button onClick={() => void copyText("npm i @chladni/react", "install")}>
+                {copied === "install" ? "Copied" : "Copy"}
+              </Button>
+            </span>
+            <a className="btn" href="https://github.com/<user>/chladni">
+              GitHub
             </a>
           </div>
-          <p className="credit">Open source · MIT licensed</p>
+          <ul className="hero-meta">
+            <li>WebGL2, one shared context for any number of plates</li>
+            <li>Physics-based: real plate modes, Lorentzian resonance</li>
+            <li>Zero dependencies in the engine</li>
+          </ul>
         </section>
 
         <section
@@ -643,27 +823,172 @@ export function App() {
           />
         </section>
 
+        <h2 id="use" className="sec">
+          <span className="eyebrow">01 · Quick start</span>Install, point it at a voice, ship
+        </h2>
+        <p className="sec-sub">
+          Three steps. The code in step 3 is live — it mirrors whatever you set on the stage and in{" "}
+          <a href="#tune">Tune</a>, so configure the plate here and paste the result.
+        </p>
+        <div className="quick">
+          <div className="step">
+            <span className="stepnum">1</span>
+            <div>
+              <div className="step-head">
+                <h3>Install</h3>
+                <Button
+                  onClick={() => void copyText("npm i @chladni/react @chladni/core", "install2")}
+                >
+                  {copied === "install2" ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <p>
+                <code>@chladni/react</code> is the component; it re-exports everything from{" "}
+                <code>@chladni/core</code>, the framework-free engine.
+              </p>
+              <pre>
+                <code>{`npm i @chladni/react @chladni/core
+# engine only, no React:
+npm i @chladni/core`}</code>
+              </pre>
+            </div>
+          </div>
+          <div className="step">
+            <span className="stepnum">2</span>
+            <div>
+              <h3>Give it a voice</h3>
+              <p>
+                Anything that is — or quacks like — a Web Audio <code>AnalyserNode</code>. The
+                helpers set it up with the right FFT size.
+              </p>
+              <pre>
+                <code>{`import {
+  createMicAnalyser, createElementAnalyser, SimulatedVoice,
+} from "@chladni/react";
+
+const mic = await createMicAnalyser();      // the caller
+const tts = createElementAnalyser(audioEl); // the agent's playback
+const demo = new SimulatedVoice();          // no audio at all
+
+// or your own AnalyserNode on any stream:
+node.fftSize = 8192;
+node.smoothingTimeConstant = 0.5;`}</code>
+              </pre>
+            </div>
+          </div>
+          <div className="step wide">
+            <span className="stepnum">3</span>
+            <div>
+              <div className="step-head">
+                <h3>
+                  Render it
+                  <span className="live">
+                    <i />
+                    live — follows the stage and Tune
+                  </span>
+                </h3>
+                <Button onClick={() => void copyText(snippet, "snippet")}>
+                  {copied === "snippet" ? "Copied" : "Copy code"}
+                </Button>
+              </div>
+              <div className="snippet-tabs">
+                <SegmentedControl
+                  ariaLabel="Snippet language"
+                  size="small"
+                  options={[
+                    { value: "react", label: "React" },
+                    { value: "vanilla", label: "Vanilla TS" },
+                  ]}
+                  value={snippetLang}
+                  onChange={setSnippetLang}
+                />
+              </div>
+              <pre>
+                <code>{snippet}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+
+        <h2 id="states" className="sec">
+          <span className="eyebrow">02 · For voice agents</span>One plate, four states
+        </h2>
+        <p className="sec-sub">
+          Map your call state onto the plate. <b>Talking</b> is the plate proper — pass it the
+          agent's analyser. The three quiet states are a small particle layer with no audio behind
+          them (<code>SandField</code> in this site's source), shown here on the same shape and
+          palette as the stage.
+        </p>
+        <div className="how" style={plateRadiusStyle}>
+          {PLATE_STATES.map((s) => (
+            <figure key={s.id} className={`state-${s.id}`}>
+              {"custom" in s ? (
+                <SandField
+                  sand={params.look.color}
+                  plate={params.look.plateColor}
+                  shape={params.plate.shape}
+                  mode={s.custom}
+                />
+              ) : (
+                <ChladniPlate
+                  params={withStageLook(s.p as DeepPartial<ChladniParams>)}
+                  analyser={s.source}
+                />
+              )}
+              <figcaption>
+                <b>{s.name}</b>
+                {s.cap}
+                <span className="state-tag">{s.code}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        <h2 id="presets" className="sec">
+          <span className="eyebrow">03 · Presets</span>Start from a scene
+        </h2>
+        <p className="sec-sub">
+          Click one to load it on the stage — the quick-start snippet updates to match. Each is a
+          plain <code>params</code> object you can also import from <code>PRESETS</code>.
+        </p>
+        <div className="presets">
+          {Object.entries(PRESETS).map(([key, p]) => (
+            <button key={key} className="preset-card" onClick={() => applyPreset(key)}>
+              <ChladniPlate
+                params={
+                  {
+                    ...p.params,
+                    look: { ...THEME_LOOK[theme].look, ...p.params.look },
+                  } as DeepPartial<ChladniParams>
+                }
+                analyser={simVoice}
+              />
+              <b>{p.label}</b>
+              <span>{p.description}</span>
+            </button>
+          ))}
+        </div>
+
         <div className="sec-head">
           <h2 id="tune" className="sec">
-            <span className="eyebrow">01 · Controls</span>Tune
+            <span className="eyebrow">04 · Configure</span>Tune every parameter
           </h2>
           <div className="sec-side">
             <p className="sec-sub">
-              Every slider changes the plate live. Hover the ⓘ for what each does, and copy the
-              settings to share a look.
+              The whole <code>ChladniParams</code> surface, grouped as in the API. Every change hits
+              the stage and the quick-start snippet live; hover ⓘ for what a control does.
             </p>
             <div className="tune-actions">
               <Button
                 onClick={() => {
-                  setParams(DEFAULT_PARAMS);
-                  setPatch({});
+                  loadParams({});
                   plateRef.current?.resetSand();
                 }}
               >
                 Reset
               </Button>
-              <Button onClick={() => void copySettings()}>
-                {copied ? "Copied" : "Copy settings"}
+              <Button onClick={() => void copyText(JSON.stringify(tunedPatch, null, 2), "json")}>
+                {copied === "json" ? "Copied" : "Copy JSON"}
               </Button>
             </div>
           </div>
@@ -736,138 +1061,148 @@ export function App() {
                 );
               })}
             </div>
-            <div className="pcard">
-              <b>Status</b>
-              <p className="pstatus">{status}</p>
-            </div>
           </aside>
         </div>
 
-        <h2 id="inside" className="sec">
-          <span className="eyebrow">02 · Inside</span>How the plate is built
-        </h2>
-        <p className="sec-sub">Four views, each one live with the same simulated voice.</p>
-        <div className="how" style={plateRadiusStyle}>
-          {demos.map((d, i) => (
-            <figure key={i}>
-              <span className="stepnum">{i + 1}</span>
-              <ChladniPlate
-                params={withStageLook(d.p as DeepPartial<ChladniParams>)}
-                analyser={simVoice}
-              />
-              <figcaption>
-                <b>{d.title}</b>
-                {d.cap}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-        <p className="pipeline">
-          <b>Audio → FFT → partials → modes → resonance → sand.</b> An analyser node measures the
-          spectrum; the strongest peaks become <b>partials</b>. Each partial shakes the plate's
-          vibration modes through a Lorentzian resonance — on a resonance the figure is clean,
-          between two it blends, far from all it trembles. The driven displacement field is drawn as
-          a standing wave; thousands of grains jitter in proportion to local vibration and drift
-          down its gradient until only the nodal lines hold sand.
-        </p>
-
-        <h2 id="states" className="sec">
-          <span className="eyebrow">03 · States</span>Four states
+        <h2 id="props" className="sec">
+          <span className="eyebrow">05 · Reference</span>Props
         </h2>
         <p className="sec-sub">
-          The same plate in each state. Only Talking runs on a voice — a simulated one here.
+          Everything <code>&lt;ChladniPlate /&gt;</code> accepts, then every key of{" "}
+          <code>params</code>. The parameter table is generated from the engine's schema and
+          defaults, so it is always current. The same tables, plus the imperative handle and audio
+          helpers, are in each package's README.
         </p>
-        <div className="how" style={plateRadiusStyle}>
-          {PLATE_STATES.map((s) => (
-            <figure key={s.id} className={`state-${s.id}`}>
-              {"custom" in s ? (
-                <SandField
-                  sand={params.look.color}
-                  plate={params.look.plateColor}
-                  shape={params.plate.shape}
-                  mode={s.custom}
-                />
-              ) : (
-                <ChladniPlate
-                  params={withStageLook(s.p as DeepPartial<ChladniParams>)}
-                  analyser={s.source}
-                />
-              )}
-              <figcaption>
-                <b>{s.name}</b>
-                {s.cap}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-
-        <h2 id="presets" className="sec">
-          <span className="eyebrow">04 · Presets</span>Presets
-        </h2>
-        <p className="sec-sub">Starter scenes — pick one, then make it yours in Tune.</p>
-        <div className="presets">
-          {Object.entries(PRESETS).map(([key, p]) => (
-            <button key={key} className="preset-card" onClick={() => applyPreset(key)}>
-              <ChladniPlate
-                params={
-                  {
-                    ...p.params,
-                    look: { ...THEME_LOOK[theme].look, ...p.params.look },
-                  } as DeepPartial<ChladniParams>
-                }
-                analyser={simVoice}
-              />
-              <b>{p.label}</b>
-              <span>{p.description}</span>
-            </button>
-          ))}
-        </div>
-
-        <h2 id="use" className="sec">
-          <span className="eyebrow">05 · Use it</span>Use it in your project
-        </h2>
+        <h3 className="ref-h">
+          <code>&lt;ChladniPlate /&gt;</code>
+        </h3>
+        <table className="props">
+          <thead>
+            <tr>
+              <th>Prop</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            {COMPONENT_PROPS.map((p) => (
+              <tr key={p.name}>
+                <td>
+                  <code>{p.name}</code>
+                </td>
+                <td>
+                  <code>{p.type}</code>
+                </td>
+                <td>
+                  <code>{p.def}</code>
+                </td>
+                <td>{p.desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <h3 className="ref-h">
+          <code>params</code> — <code>DeepPartial&lt;ChladniParams&gt;</code>
+        </h3>
         <p className="sec-sub">
-          A React component over a plain-TypeScript engine — install and give it any AnalyserNode.
+          <code>params</code> is one nested object with six groups —{" "}
+          {GROUP_ORDER.map((g, i) => (
+            <span key={g}>
+              {i > 0 && " · "}
+              <code>{g}</code>
+            </span>
+          ))}
+          . A key in the table like <code>plate.shape</code> means{" "}
+          <code>{"{ plate: { shape } }"}</code>. Only include what you want to change; everything
+          else comes from <code>DEFAULT_PARAMS</code>. In React the prop is authoritative — if you
+          later drop a key from the object, that value goes back to its default.
         </p>
-        <div className="useit">
-          <div className="step">
-            <span className="stepnum">1</span>
-            <div>
-              <h3>Install</h3>
-              <pre>
-                <code>
-                  pnpm add @chladni/react{"\n"}# or the engine alone: pnpm add @chladni/core
-                </code>
-              </pre>
-            </div>
-          </div>
-          <div className="step">
-            <span className="stepnum">2</span>
-            <div>
-              <h3>React</h3>
-              <pre>
-                <code>{`import { ChladniPlate, SimulatedVoice } from "@chladni/react";
-
+        <pre className="ref-example">
+          <code>{`// React — the prop
 <ChladniPlate
-  params={{ plate: { shape: "circle" } }}
-  analyser={new SimulatedVoice()}
-/>`}</code>
-              </pre>
-            </div>
-          </div>
-          <div className="step">
-            <span className="stepnum">3</span>
-            <div>
-              <h3>Vanilla</h3>
-              <pre>
-                <code>{`import { createChladniPlate, SimulatedVoice } from "@chladni/core";
+  analyser={mic.analyser}
+  params={{
+    plate: { shape: "square", size: 40 },   // plate.shape, plate.size
+    look: { look: "ink", color: "#f3ead8" }, // look.look, look.color
+  }}
+/>
 
-const plate = createChladniPlate(document.querySelector("canvas"));
-plate.setAnalyser(new SimulatedVoice());`}</code>
-              </pre>
-            </div>
+// Vanilla — at creation, or any time later
+const plate = createChladniPlate(canvas, { params: { plate: { shape: "square" } } });
+plate.setParams({ look: { look: "ink" } }); // merged over the current state
+
+// Presets are just params objects
+<ChladniPlate params={PRESETS["voice"].params} />`}</code>
+        </pre>
+        <table className="props">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Type / values</th>
+              <th>Default</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(PARAM_SCHEMA).map(([key, e]) => {
+              const [g, k] = key.split(".") as [keyof ChladniParams, string];
+              const def = (DEFAULT_PARAMS[g] as Record<string, unknown>)[k];
+              return (
+                <tr key={key}>
+                  <td>
+                    <code>{key}</code>
+                    <span className="ref-label">{e.label}</span>
+                  </td>
+                  <td>
+                    <code>{paramType(e)}</code>
+                  </td>
+                  <td>
+                    <code>{String(def)}</code>
+                  </td>
+                  <td>{e.help}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <h2 id="faq" className="sec">
+          <span className="eyebrow">06 · FAQ</span>Questions
+        </h2>
+        <details className="faq" open>
+          <summary>How is the plate built?</summary>
+          <p className="sec-sub">Four views, each one live with the same simulated voice.</p>
+          <div className="how" style={plateRadiusStyle}>
+            {demos.map((d, i) => (
+              <figure key={i}>
+                <span className="stepnum">{i + 1}</span>
+                <ChladniPlate
+                  params={withStageLook(d.p as DeepPartial<ChladniParams>)}
+                  analyser={simVoice}
+                />
+                <figcaption>
+                  <b>{d.title}</b>
+                  {d.cap}
+                </figcaption>
+              </figure>
+            ))}
           </div>
-        </div>
+          <p className="pipeline">
+            <b>Audio → FFT → partials → modes → resonance → sand.</b> An analyser node measures the
+            spectrum; the strongest peaks become <b>partials</b>. Each partial shakes the plate's
+            vibration modes through a Lorentzian resonance — on a resonance the figure is clean,
+            between two it blends, far from all it trembles. The driven displacement field is drawn
+            as a standing wave; thousands of grains jitter in proportion to local vibration and
+            drift down its gradient until only the nodal lines hold sand.
+          </p>
+        </details>
+        {FAQ.map((f) => (
+          <details key={f.q} className="faq">
+            <summary>{f.q}</summary>
+            <p className="pipeline">{f.a}</p>
+          </details>
+        ))}
         <p className="pipeline">
           Research notes (Figura parameter catalog, behaviour rules, plate physics):{" "}
           <a href="https://github.com/<user>/chladni" style={{ color: "var(--accent)" }}>
@@ -876,7 +1211,13 @@ plate.setAnalyser(new SimulatedVoice());`}</code>
           in the repository.
         </p>
       </main>
-      <footer>Built with @chladni/core · Open source · MIT</footer>
+      <footer>
+        <span>chladni · MIT</span>
+        <span>
+          <a href="#use">Quick start</a> · <a href="#props">Props</a> ·{" "}
+          <a href="https://github.com/<user>/chladni">GitHub</a>
+        </span>
+      </footer>
     </>
   );
 }
