@@ -15,6 +15,7 @@ import { Slider } from "../components/Slider";
 import { Switch } from "../components/Switch";
 import { SITE_PARAMS, THEME_LOOK, simVoice, useTheme } from "../site";
 import { ALL_ENTRIES, DOC_GROUPS, findEntry, type Control, type DocEntry } from "./content";
+import { GUIDES, findGuide } from "./guides";
 import "./docs.css";
 
 const DEFAULT_ID = DOC_GROUPS[0]!.entries[0]!.id;
@@ -30,8 +31,10 @@ const STATES: { value: AgentState; label: string }[] = [
 ];
 
 function useSelected(hash: string) {
-  const id = decodeURIComponent(hash.replace(/^#\/docs\/?/, "")) || DEFAULT_ID;
-  return findEntry(id) ?? findEntry(DEFAULT_ID)!;
+  const id = decodeURIComponent(hash.replace(/^#\/docs\/?/, ""));
+  const guide = id.startsWith("guide/") ? findGuide(id.slice(6)) : null;
+  const found = findEntry(id) ?? findEntry(DEFAULT_ID)!;
+  return { ...found, guide };
 }
 
 /** everything the user has changed, split into params and component props */
@@ -239,7 +242,7 @@ function Orb({
 
 export function DocsPage({ hash }: { hash: string }) {
   const [theme, toggleTheme] = useTheme();
-  const { group, entry } = useSelected(hash);
+  const { group, entry, guide } = useSelected(hash);
   const [values, setValues] = useState<Values>({});
   const [restartKey, setRestartKey] = useState(0);
   const [burstUntil, setBurstUntil] = useState(0);
@@ -289,9 +292,10 @@ export function DocsPage({ hash }: { hash: string }) {
   };
 
   useEffect(() => {
-    document.title = `${entry.name} · chladni docs`;
+    document.title = `${guide ? guide.title : entry.name} · chladni docs`;
     setNavOpen(false);
-  }, [entry]);
+    window.scrollTo({ top: 0 });
+  }, [entry, guide]);
 
   const copy = async () => {
     await navigator.clipboard.writeText(code);
@@ -299,9 +303,13 @@ export function DocsPage({ hash }: { hash: string }) {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const idx = ALL_ENTRIES.findIndex((e) => e.id === entry.id);
-  const prev = ALL_ENTRIES[idx - 1];
-  const next = ALL_ENTRIES[idx + 1];
+  const pages = [
+    ...GUIDES.map((g) => ({ id: `guide/${g.id}`, name: g.title })),
+    ...ALL_ENTRIES.map((e) => ({ id: e.id, name: e.name })),
+  ];
+  const idx = pages.findIndex((p) => p.id === (guide ? `guide/${guide.id}` : entry.id));
+  const prev = pages[idx - 1];
+  const next = pages[idx + 1];
   const changed = [
     ...ALL_ENTRIES.filter((e) => PROP_IDS.has(e.id) && e.id in values && e.id !== "prop.params"),
     ...built.touched,
@@ -319,7 +327,7 @@ export function DocsPage({ hash }: { hash: string }) {
         </button>
         <div className="nav-right">
           <a href="#use">Quick start</a>
-          <a href="https://github.com/<user>/chladni">GitHub</a>
+          <a href="https://github.com/atharvapatil/chladni-orb">GitHub</a>
           <Button
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             onClick={toggleTheme}
@@ -331,14 +339,22 @@ export function DocsPage({ hash }: { hash: string }) {
 
       <div className="docs-body">
         <nav className={`docs-nav${navOpen ? " open" : ""}`}>
-          <div className="nav-group">
+          <div className="nav-group is-open">
             <span className="nav-title">Getting started</span>
-            <a href="#use">Install and quick start</a>
-            <a href="#states">Voice-agent states</a>
-            <a href="#presets">Presets</a>
+            <div className="nav-items">
+              {GUIDES.map((g) => (
+                <a
+                  key={g.id}
+                  href={`#/docs/guide/${g.id}`}
+                  className={guide?.id === g.id ? "is-active" : ""}
+                >
+                  {g.title}
+                </a>
+              ))}
+            </div>
           </div>
           {DOC_GROUPS.map((g) => (
-            <div key={g.id} className={`nav-group${g.id === group.id ? " is-open" : ""}`}>
+            <div key={g.id} className={`nav-group${!guide && g.id === group.id ? " is-open" : ""}`}>
               <a className="nav-title" href={`#/docs/${g.entries[0]!.id}`}>
                 {g.label}
               </a>
@@ -347,7 +363,7 @@ export function DocsPage({ hash }: { hash: string }) {
                   <a
                     key={e.id}
                     href={`#/docs/${e.id}`}
-                    className={`${e.id === entry.id ? "is-active" : ""}${
+                    className={`${!guide && e.id === entry.id ? "is-active" : ""}${
                       e.id in values && values[e.id] !== e.initial ? " is-changed" : ""
                     }`}
                   >
@@ -360,49 +376,57 @@ export function DocsPage({ hash }: { hash: string }) {
         </nav>
 
         <main className="docs-entry">
-          <div className="entry-body">
-            <h1>{entry.name}</h1>
-            <p className="detail-summary">{entry.summary}</p>
-            {entry.effect.map((para, i) => (
-              <p key={i} className="detail-effect">
-                {para}
+          {guide ? (
+            <div className="entry-body guide">
+              <h1>{guide.title}</h1>
+              <p className="detail-summary">{guide.summary}</p>
+              {guide.body}
+            </div>
+          ) : (
+            <div className="entry-body">
+              <h1>{entry.name}</h1>
+              <p className="detail-summary">{entry.summary}</p>
+              {entry.effect.map((para, i) => (
+                <p key={i} className="detail-effect">
+                  {para}
+                </p>
+              ))}
+
+              {entry.control.kind !== "none" && (
+                <section className="try-section">
+                  <h3>Try it</h3>
+                  <div className="detail-control">
+                    <ValueControl control={entry.control} value={value} onChange={setValue} />
+                  </div>
+                </section>
+              )}
+
+              <h3>Accepts</h3>
+              <p>
+                <code>{entry.accepts}</code>
               </p>
-            ))}
 
-            {entry.control.kind !== "none" && (
-              <section className="try-section">
-                <h3>Try it</h3>
-                <div className="detail-control">
-                  <ValueControl control={entry.control} value={value} onChange={setValue} />
+              <h3>Default</h3>
+              <p>
+                <code>{entry.def}</code>
+              </p>
+              {entry.tip && (
+                <div className="detail-tip">
+                  <span>Note</span>
+                  <p>{entry.tip}</p>
                 </div>
-              </section>
-            )}
+              )}
 
-            <h3>Accepts</h3>
-            <p>
-              <code>{entry.accepts}</code>
-            </p>
-
-            <h3>Default</h3>
-            <p>
-              <code>{entry.def}</code>
-            </p>
-            {entry.tip && (
-              <div className="detail-tip">
-                <span>Note</span>
-                <p>{entry.tip}</p>
-              </div>
-            )}
-
-            {entry.example && (
-              <>
-                <h3>In code</h3>
-                <pre>
-                  <code>{entry.example}</code>
-                </pre>
-              </>
-            )}
-          </div>
+              {entry.example && (
+                <>
+                  <h3>In code</h3>
+                  <pre>
+                    <code>{entry.example}</code>
+                  </pre>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="detail-nav">
             {prev ? <a href={`#/docs/${prev.id}`}>← {prev.name}</a> : <span />}

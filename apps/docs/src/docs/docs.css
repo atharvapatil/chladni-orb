@@ -104,6 +104,9 @@
   text-decoration: none;
   border-left: 1px solid transparent;
   margin-left: -1px;
+  transition:
+    color var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out);
 }
 
 .nav-items a:hover,
@@ -136,6 +139,41 @@
 
 .entry-body > * {
   max-width: 640px;
+}
+
+.entry-body.guide ul {
+  padding-left: 18px;
+  margin: 0 0 10px;
+  color: var(--secondary);
+  line-height: var(--lh-relaxed);
+}
+
+.entry-body.guide li {
+  margin-bottom: 6px;
+}
+
+.entry-body.guide li code,
+.entry-body.guide p code {
+  color: var(--text);
+}
+
+.entry-body.guide pre {
+  margin: 10px 0 16px;
+}
+
+.entry-body.guide a {
+  color: var(--text);
+}
+
+.guide-preset {
+  border-top: 1px solid var(--edge);
+  padding-top: 6px;
+  margin-top: 18px;
+}
+
+.guide-preset h3 code {
+  margin-left: 8px;
+  font-weight: 400;
 }
 
 /* the control sits in its own band, cut off from the prose by a rule */
@@ -258,6 +296,7 @@
 }
 
 .orb-changes li {
+  animation: ui-swap-in var(--dur-swap) var(--ease-out);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -292,6 +331,13 @@
   line-height: 1;
   cursor: pointer;
   padding: 0 2px;
+  transition:
+    color var(--dur-hover) var(--ease-out),
+    transform var(--dur-hover) var(--ease-out);
+}
+
+.orb-changes li button:active {
+  transform: scale(0.9);
 }
 
 .orb-changes li button:hover {
@@ -423,6 +469,7 @@
 .detail-nav a {
   color: var(--secondary);
   text-decoration: none;
+  transition: color var(--dur-hover) var(--ease-out);
 }
 
 .detail-nav a:hover {

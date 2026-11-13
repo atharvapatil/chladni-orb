@@ -41,10 +41,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/<user>/chladni.git",
+    "url": "https://github.com/atharvapatil/chladni-orb.git",
     "directory": "packages/react"
   },
-  "homepage": "https://<user>.github.io/chladni/",
+  "homepage": "https://atharvapatil.github.io/chladni-orb/",
   "keywords": [
     "chladni",
     "cymatics",

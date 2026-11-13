@@ -7,11 +7,11 @@
   --border: #ffffff;
   --text: #e8e6e1;
   --secondary: #d4d4d4;
-  --tertiary: #464646;
+  --tertiary: #525252;
   --accent: #ececec;
   --active-fg: #111;
-  --seg-bg: #27272a;
-  --seg-active: #474739;
+  --seg-bg: #0c0a09;
+  --seg-active: #27272a;
   --seg-active-fg: #ffffff;
   --level: #2b2f3a;
   --oss-dot: #34a853;
@@ -53,6 +53,21 @@
   --lh-snug: 1.35;
   --lh-normal: 1.5;
   --lh-relaxed: 1.65;
+
+  /* motion: short, strong ease-out, transform and opacity. Exits beat entrances. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-knob: cubic-bezier(0.34, 1.3, 0.64, 1);
+  --dur-hover: 150ms; /* press, hover colour, toggle colour */
+  --dur-swap: 200ms; /* label swap, copy tick, fold */
+  --dur-open: 250ms; /* sliding pill, step fold */
+  --press: 0.97;
+}
+
+/* focus is a ring, the same on every control */
+:where(.ui-btn, .btn, .ui-seg button, .ui-switch, .step-toggle, .preset-card):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 * {
@@ -119,6 +134,7 @@ main {
   color: var(--secondary);
   text-decoration: none;
   font-size: var(--fs-base);
+  transition: color var(--dur-hover) var(--ease-out);
 }
 
 .nav nav a:hover {
@@ -226,28 +242,6 @@ main {
   font-size: var(--fs-xs);
 }
 
-.hero-meta {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin: 22px 0 0;
-  padding: 0;
-  list-style: none;
-  color: var(--secondary);
-  font-size: var(--fs-sm);
-}
-
-.hero-meta li::before {
-  content: "";
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--tertiary);
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
 /* ---------- buttons (Figma: Button set) ---------- */
 
 .ui-btn,
@@ -268,9 +262,25 @@ main {
   cursor: pointer;
 }
 
+.ui-btn,
+.btn {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition:
+    transform var(--dur-hover) var(--ease-out),
+    background-color var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out),
+    color var(--dur-hover) var(--ease-out);
+}
+
 .ui-btn:hover,
 .btn:hover {
+  background: var(--seg-active);
   border-color: var(--secondary);
+}
+
+.ui-btn:active,
+.btn:active {
+  transform: scale(var(--press));
 }
 
 .ui-btn.primary,
@@ -282,13 +292,33 @@ main {
 
 .ui-btn.primary:hover,
 .btn.primary:hover {
-  opacity: 0.88;
-  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 90%, var(--active-fg));
+  border-color: transparent;
 }
 
 .ui-btn:disabled {
   opacity: 0.4;
   cursor: default;
+  transform: none;
+}
+
+/* a label that changes in place (Copy → Copied) swaps through a short blur */
+.ui-swap {
+  display: inline-block;
+  animation: ui-swap-in var(--dur-swap) var(--ease-out);
+}
+
+@keyframes ui-swap-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
 }
 
 .ui-btn svg {
@@ -311,37 +341,71 @@ main {
   letter-spacing: 0.02em;
 }
 
-/* Figma: Segmented control set — r4 container, r6 active item */
+/* Figma: Segmented control set — r4 container, r6 active item.
+   One pill slides under the chosen option; the buttons only change colour. */
 .ui-seg {
+  position: relative;
   display: inline-flex;
   gap: 2px;
   background: var(--seg-bg);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 3px;
   flex-wrap: wrap;
+  isolation: isolate;
+}
+
+.ui-seg-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: var(--w);
+  transform: translateX(var(--x));
+  background: var(--seg-active);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ui-seg-pill.is-live {
+  transition:
+    transform var(--dur-open) var(--ease-move),
+    width var(--dur-open) var(--ease-move);
 }
 
 .ui-seg button {
+  position: relative;
+  z-index: 1;
   border: none;
   background: transparent;
   color: var(--secondary);
-  border-radius: 9999px;
+  border-radius: 6px;
   padding: 5px 13px;
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
+  transition:
+    color var(--dur-hover) var(--ease-out),
+    transform var(--dur-hover) var(--ease-out);
 }
 
 .ui-seg button:hover {
   color: var(--text);
 }
 
+.ui-seg button:active {
+  transform: scale(var(--press));
+}
+
 .ui-seg button.active {
-  background: var(--seg-active);
   color: var(--seg-active-fg);
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+.ui-seg.sm .ui-seg-pill {
+  top: 2px;
+  bottom: 2px;
 }
 
 .ui-seg.sm {
@@ -356,7 +420,7 @@ main {
 
 .stage-card {
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius: 8px;
   background: var(--panel);
   padding: 36px 32px 24px;
   display: flex;
@@ -453,6 +517,19 @@ main {
   background: var(--panel);
   border: 2px solid var(--accent);
   margin-top: -6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition:
+    transform var(--dur-hover) var(--ease-out),
+    box-shadow var(--dur-hover) var(--ease-out);
+}
+
+.ui-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.ui-slider:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .ui-slider::-moz-range-track {
@@ -473,6 +550,11 @@ main {
   border-radius: 8px;
   background: var(--panel);
   border: 2px solid var(--accent);
+  transition: transform var(--dur-hover) var(--ease-out);
+}
+
+.ui-slider:active::-moz-range-thumb {
+  transform: scale(1.2);
 }
 
 .ui-slider:disabled {
@@ -488,12 +570,13 @@ main {
   flex-shrink: 0;
   padding: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--tertiary);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color var(--dur-hover) var(--ease-out);
 }
 
+/* the knob travels with a little overshoot and squashes while pressed */
 .ui-switch i {
   position: absolute;
   top: 2px;
@@ -503,9 +586,15 @@ main {
   height: 16px;
   border-radius: 8px;
   background: var(--panel);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   transition:
-    left 0.15s,
-    background 0.15s;
+    transform 300ms var(--ease-knob),
+    width var(--dur-hover) var(--ease-out),
+    background-color var(--dur-hover) var(--ease-out);
+}
+
+.ui-switch:active i {
+  width: 20px;
 }
 
 .ui-switch.on {
@@ -513,8 +602,12 @@ main {
 }
 
 .ui-switch.on i {
-  left: 18px;
+  transform: translateX(16px);
   background: var(--active-fg);
+}
+
+.ui-switch.on:active i {
+  transform: translateX(12px);
 }
 
 .ui-switch:disabled {
@@ -570,6 +663,23 @@ main {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
+}
+
+.pickers input[type="color"],
+.ctl-swatch input[type="color"] {
+  transition:
+    transform var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out);
+}
+
+.pickers input[type="color"]:hover,
+.ctl-swatch input[type="color"]:hover {
+  border-color: var(--secondary);
+}
+
+.pickers input[type="color"]:active,
+.ctl-swatch input[type="color"]:active {
+  transform: scale(var(--press));
 }
 
 .status {
@@ -659,38 +769,45 @@ main > .sec-sub {
 }
 
 .gcard {
-  display: grid;
-  grid-template-columns: 168px minmax(0, 1fr);
-  gap: 24px;
   border: 1px solid var(--edge);
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--panel);
-  padding: 20px 22px;
+  padding: 20px 20px 8px;
 }
 
-.gside b {
+.ghead {
+  margin-bottom: 18px;
+}
+
+.ghead b {
   display: block;
-  font-size: var(--fs-base);
-  margin-bottom: 4px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin-bottom: 2px;
 }
 
-.gside p {
+.ghead p {
   color: var(--secondary);
   font-size: var(--fs-sm);
-  line-height: 1.5;
+  line-height: var(--lh-normal);
   margin: 0;
 }
 
+/* three columns of controls; each control is a label row + the control */
 .gbody {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  column-gap: 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 28px;
+  row-gap: 4px;
 }
 
 .ctl {
-  display: block;
-  font-size: var(--fs-sm);
-  margin: 7px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--fs-base);
+  padding: 10px 0 16px;
+  min-width: 0;
 }
 
 .ctl .row {
@@ -698,9 +815,10 @@ main > .sec-sub {
   justify-content: space-between;
   gap: 8px;
   align-items: baseline;
+  min-height: 20px;
 }
 
-.ctl .row > span:first-child {
+.ctl-label {
   color: var(--text);
 }
 
@@ -708,26 +826,52 @@ main > .sec-sub {
   color: var(--secondary);
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
+}
+
+.ctl .ui-slider {
+  margin-top: 2px;
 }
 
 .ctl .ui-seg {
-  margin-top: 4px;
+  flex-wrap: nowrap;
+  align-self: flex-start;
 }
 
-.ctl.bool {
-  display: flex;
+.ctl-swatch {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  color: var(--text);
+}
+
+.ctl-swatch input[type="color"] {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
 }
 
 /* ---------- tooltips ---------- */
 
 .tip {
   position: relative;
-  color: var(--secondary);
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -1px;
+  color: var(--tertiary);
   cursor: help;
-  font-size: var(--fs-xs);
+}
+
+.tip:hover {
+  color: var(--secondary);
+}
+
+.ui-info {
+  display: block;
 }
 
 .tip::before {
@@ -763,13 +907,22 @@ main > .sec-sub {
   border-radius: 8px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s;
+  transform: translate(-50%, 2px) scale(0.97);
+  transform-origin: bottom center;
+  transition:
+    opacity 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
   z-index: 30;
 }
 
 .tip:hover::before,
 .tip:hover::after {
   opacity: 1;
+}
+
+.tip:hover::after {
+  transform: translate(-50%, 0) scale(1);
+  transition-duration: var(--dur-hover);
 }
 
 /* ---------- side cards ---------- */
@@ -784,9 +937,9 @@ main > .sec-sub {
 
 .pcard {
   border: 1px solid var(--edge);
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--panel);
-  padding: 16px 18px;
+  padding: 16px 20px;
 }
 
 .pcard > b {
@@ -1091,16 +1244,501 @@ footer a:hover {
 .preset-card {
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 14px;
-  padding: 14px;
+  border-radius: 8px;
+  padding: 16px;
   text-align: left;
   font: inherit;
   color: var(--text);
   cursor: pointer;
 }
 
+.preset-card {
+  transition:
+    transform var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out),
+    background-color var(--dur-hover) var(--ease-out);
+}
+
 .preset-card:hover {
   border-color: var(--secondary);
+}
+
+.preset-card:active {
+  transform: scale(0.985);
+}
+
+.preset-card b {
+  display: block;
+  font-size: var(--fs-base);
+  margin-bottom: 4px;
+}
+
+.preset-card span {
+  font-size: var(--fs-sm);
+  color: var(--secondary);
+  line-height: 1.35;
+  display: block;
+}
+
+.preset-card canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  background: transparent;
+  margin-bottom: 10px;
+}
+
+/* ---------- quick start: folding stepper ---------- */
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.step-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--edge);
+}
+
+.step-item:first-child {
+  border-top: 0;
+}
+
+/* the rail joining the numbers */
+.step-item::before {
+  content: "";
+  position: absolute;
+  left: 29px;
+  top: 40px;
+  bottom: -1px;
+  border-left: 1px solid var(--edge);
+}
+
+.step-item:last-child::before {
+  display: none;
+}
+
+.step-marker {
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  border: 1px solid var(--edge);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--secondary);
+  background: var(--panel);
+  position: relative;
+  z-index: 1;
+}
+
+.step-marker {
+  transition:
+    background-color var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out),
+    color var(--dur-hover) var(--ease-out);
+}
+
+.step-marker-glyph {
+  display: inline-block;
+  animation: ui-glyph-in var(--dur-swap) var(--ease-out);
+}
+
+@keyframes ui-glyph-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.step-item.is-open .step-marker {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.step-item.is-done .step-marker {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--active-fg);
+}
+
+.step-action {
+  opacity: 0;
+  transform: scale(0.95);
+  pointer-events: none;
+  transition:
+    opacity var(--dur-hover) var(--ease-out),
+    transform var(--dur-hover) var(--ease-out);
+}
+
+.step-action.is-shown {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* accordion fold: grid rows 0fr → 1fr, content fades a beat behind */
+.step-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-open) var(--ease-out);
+}
+
+.step-fold-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.step-body {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--dur-hover) var(--ease-out),
+    transform var(--dur-hover) var(--ease-out);
+}
+
+.step-item.is-open .step-fold {
+  grid-template-rows: 1fr;
+}
+
+.step-item.is-open .step-body {
+  opacity: 1;
+  transform: none;
+  transition-duration: var(--dur-swap);
+  transition-delay: 60ms;
+}
+
+.step-main {
+  min-width: 0;
+}
+
+.step-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.step-head .ui-btn {
+  height: 26px;
+  font-size: var(--fs-sm);
+  flex-shrink: 0;
+}
+
+.step-toggle {
+  all: unset;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.step-title {
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.step-summary {
+  font-size: var(--fs-sm);
+  color: var(--secondary);
+  line-height: var(--lh-normal);
+}
+
+.step-summary {
+  transition: opacity var(--dur-hover) var(--ease-out);
+}
+
+.step-item.is-open .step-summary {
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.step-body {
+  margin-top: 12px;
+}
+
+.step-body p {
+  color: var(--secondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  margin: 0 0 10px;
+}
+
+.step-next {
+  margin-top: 12px;
+}
+
+.snippet-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+/* a live snippet reflects the stage; the badge says so */
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--secondary);
+  font-weight: 400;
+}
+
+.live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--oss-dot);
+}
+
+.stepnum {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--accent);
+}
+
+.how canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  background: transparent;
+  border-radius: var(--plate-radius, 0);
+}
+
+.how figcaption {
+  font-size: var(--fs-sm);
+  color: var(--secondary);
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.how figcaption b {
+  display: block;
+  color: var(--text);
+  font-size: var(--fs-base);
+  margin-bottom: 2px;
+}
+
+.how figure.state-idle canvas {
+  opacity: 0.6;
+  transform: scale(0.92);
+}
+
+.how figure .state-tag {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--tertiary);
+}
+
+footer a {
+  color: var(--secondary);
+  text-decoration: none;
+}
+
+footer a:hover {
+  color: var(--text);
+}
+
+/* ---------- reference ---------- */
+
+.ref-h {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  margin: 22px 0 10px;
+  color: var(--text);
+}
+
+.ref-h code,
+.props code,
+.sec-sub code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--seg-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.ref-example {
+  margin: 0 0 16px;
+}
+
+.props {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-base);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.props th,
+.props td {
+  text-align: left;
+  vertical-align: top;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.props th {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  font-weight: 500;
+  background: var(--seg-bg);
+}
+
+.props tr:last-child td {
+  border-bottom: 0;
+}
+
+.props td:nth-child(4) {
+  color: var(--secondary);
+  line-height: 1.45;
+}
+
+.ref-label {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--fs-xs);
+  color: var(--tertiary);
+}
+
+@media (max-width: 720px) {
+  .props,
+  .props thead,
+  .props tbody,
+  .props tr,
+  .props td {
+    display: block;
+  }
+  .props thead {
+    display: none;
+  }
+  .props td {
+    border-bottom: 0;
+    padding: 4px 12px;
+  }
+  .props tr {
+    border-bottom: 1px solid var(--edge);
+    padding: 8px 0;
+  }
+}
+
+/* ---------- faq ---------- */
+
+.faq {
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 0 18px;
+  margin-bottom: 10px;
+}
+
+.faq summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::after {
+  content: "+";
+  color: var(--secondary);
+  font-weight: 400;
+  font-size: var(--fs-lg);
+}
+
+.faq[open] summary::after {
+  content: "–";
+}
+
+.faq > :not(summary) {
+  margin-bottom: 16px;
+}
+
+.faq .pipeline {
+  margin-top: 0;
+}
+
+.pipeline {
+  color: var(--secondary);
+  font-size: var(--fs-base);
+  line-height: 1.7;
+  max-width: 70ch;
+}
+
+.pipeline b {
+  color: var(--text);
+}
+
+/* ---------- presets ---------- */
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.preset-card {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.preset-card {
+  transition:
+    transform var(--dur-hover) var(--ease-out),
+    border-color var(--dur-hover) var(--ease-out),
+    background-color var(--dur-hover) var(--ease-out);
+}
+
+.preset-card:hover {
+  border-color: var(--secondary);
+}
+
+.preset-card:active {
+  transform: scale(0.985);
 }
 
 .preset-card b {
@@ -1127,7 +1765,7 @@ footer a:hover {
 
 .quick {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -1140,10 +1778,6 @@ footer a:hover {
   border-radius: 14px;
   background: var(--panel);
   padding: 18px;
-}
-
-.quick .step.wide {
-  grid-column: 1 / -1;
 }
 
 .quick .step > div {
@@ -1247,6 +1881,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .gbody {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .side {
     position: static;
     flex-direction: row;
@@ -1268,22 +1906,12 @@ footer {
     font-size: var(--fs-xl);
   }
 
-  .quick {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hero-meta {
-    flex-direction: column;
-    gap: 8px;
-  }
-
   .nav nav {
     display: none;
   }
 
-  .gcard {
-    grid-template-columns: 1fr;
-    gap: 12px;
+  .gbody {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .stage-card {
@@ -1294,5 +1922,22 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto;
+  }
+}
+
+/* fewer and gentler: travel and folds snap, press feedback may stay */
+@media (prefers-reduced-motion: reduce) {
+  .ui-seg-pill.is-live,
+  .ui-switch i,
+  .step-fold,
+  .step-body,
+  .tip::after,
+  .preset-card {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .ui-swap,
+  .step-marker-glyph {
+    animation: none;
   }
 }

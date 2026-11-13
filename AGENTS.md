@@ -44,6 +44,5 @@ pnpm release          # build + changeset publish
 ## Phase status
 
 Phases 0-6 done, including Phase 5 Lab model (exact free-edge circle +
-Rayleigh–Ritz rectangle, mode atlas). Remaining: replacing the `<user>`
-GitHub placeholders in READMEs and package.json before the first
-`pnpm release`.
+Rayleigh–Ritz rectangle, mode atlas). Repository: https://github.com/atharvapatil/chladni-orb,
+docs at https://atharvapatil.github.io/chladni-orb/.

@@ -27,10 +27,9 @@ pnpm dev              # run the docs playground
 
 ## Playground
 
-The docs playground is published at `https://<user>.github.io/chladni/`
+The docs playground is published at `https://atharvapatil.github.io/chladni-orb/`
 (see `pnpm dev` for the local version) — presets, a schema-generated
 tuning panel, and live "how it works" demos.
-
 
 ## License
 

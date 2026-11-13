@@ -14,8 +14,10 @@ import {
 } from "@chladni/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Button } from "./components/Button";
+import { InfoIcon } from "./components/InfoIcon";
 import { SegmentedControl } from "./components/SegmentedControl";
 import { Slider } from "./components/Slider";
+import { Steps } from "./components/Steps";
 import { Switch } from "./components/Switch";
 import { renderSampleBuffer } from "./sample";
 import { SITE_PARAMS, THEME_LOOK, initialTheme, simVoice, useTheme } from "./site";
@@ -23,6 +25,18 @@ import { renderVoiceBuffer } from "./voice";
 import "./styles.css";
 
 const GROUP_ORDER = ["listening", "plate", "studio", "lab", "look", "ink"] as const;
+
+// tune cards lay controls out sliders first, then colours and switches, then
+// segmented choices, so each row of three reads as one kind of thing
+const KIND_ORDER: Record<ParamSchemaEntry["kind"], number> = {
+  number: 0,
+  color: 1,
+  boolean: 2,
+  enum: 3,
+};
+
+// the Questions section is parked for now; flip this to bring it back
+const SHOW_FAQ = false;
 
 const FAQ = [
   {
@@ -524,10 +538,10 @@ plate.setAnalyser(${analyserExpr});`;
           <a href="#presets">Presets</a>
           <a href="#tune">Tune</a>
           <a href="#/docs">Docs</a>
-          <a href="#faq">FAQ</a>
+          {SHOW_FAQ && <a href="#faq">FAQ</a>}
         </nav>
         <div className="nav-right">
-          <a href="https://github.com/<user>/chladni">GitHub</a>
+          <a href="https://github.com/atharvapatil/chladni-orb">GitHub</a>
           <Button
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             onClick={toggleTheme}
@@ -560,15 +574,10 @@ plate.setAnalyser(${analyserExpr});`;
                 {copied === "install" ? "Copied" : "Copy"}
               </Button>
             </span>
-            <a className="btn" href="https://github.com/<user>/chladni">
+            <a className="btn" href="https://github.com/atharvapatil/chladni-orb">
               GitHub
             </a>
           </div>
-          <ul className="hero-meta">
-            <li>WebGL2, one shared context for any number of plates</li>
-            <li>Physics-based: real plate modes, Lorentzian resonance</li>
-            <li>Zero dependencies in the engine</li>
-          </ul>
         </section>
 
         <section
@@ -726,45 +735,49 @@ plate.setAnalyser(${analyserExpr});`;
         </section>
 
         <h2 id="use" className="sec">
-          Install, point it at a voice, ship
+          Quick start
         </h2>
         <p className="sec-sub">
-          Three steps. The code in step 3 is live: it mirrors whatever you set on the stage and in{" "}
-          <a href="#tune">Tune</a>, so configure the plate here and paste the result.
+          Three steps. The code in the last step is live: set up the plate on the stage above, or in
+          Tune below, and the code updates to match. Copy it and you are done.
         </p>
-        <div className="quick">
-          <div className="step">
-            <span className="stepnum">1</span>
-            <div>
-              <div className="step-head">
-                <h3>Install</h3>
+        <Steps
+          steps={[
+            {
+              title: "Install",
+              summary: "One package for React, or the engine on its own.",
+              action: (
                 <Button
                   onClick={() => void copyText("npm i @chladni/react @chladni/core", "install2")}
                 >
                   {copied === "install2" ? "Copied" : "Copy"}
                 </Button>
-              </div>
-              <p>
-                <code>@chladni/react</code> is the component; it re-exports everything from{" "}
-                <code>@chladni/core</code>, the framework-free engine.
-              </p>
-              <pre>
-                <code>{`npm i @chladni/react @chladni/core
+              ),
+              body: (
+                <>
+                  <p>
+                    <code>@chladni/react</code> is the component; it re-exports everything from{" "}
+                    <code>@chladni/core</code>, the framework-free engine.
+                  </p>
+                  <pre>
+                    <code>{`npm i @chladni/react @chladni/core
 # engine only, no React:
 npm i @chladni/core`}</code>
-              </pre>
-            </div>
-          </div>
-          <div className="step">
-            <span className="stepnum">2</span>
-            <div>
-              <h3>Give it a voice</h3>
-              <p>
-                Anything that is, or behaves like, a Web Audio <code>AnalyserNode</code>. The
-                helpers set it up with the right FFT size.
-              </p>
-              <pre>
-                <code>{`import {
+                  </pre>
+                </>
+              ),
+            },
+            {
+              title: "Give it a voice",
+              summary: "Any Web Audio AnalyserNode: a mic, a call, playback, or the demo voice.",
+              body: (
+                <>
+                  <p>
+                    Anything that is, or behaves like, a Web Audio <code>AnalyserNode</code>. The
+                    helpers set it up with the right FFT size.
+                  </p>
+                  <pre>
+                    <code>{`import {
   createMicAnalyser, createElementAnalyser, SimulatedVoice,
 } from "@chladni/react";
 
@@ -775,42 +788,44 @@ const demo = new SimulatedVoice();          // no audio at all
 // or your own AnalyserNode on any stream:
 node.fftSize = 8192;
 node.smoothingTimeConstant = 0.5;`}</code>
-              </pre>
-            </div>
-          </div>
-          <div className="step wide">
-            <span className="stepnum">3</span>
-            <div>
-              <div className="step-head">
-                <h3>
-                  Render it
-                  <span className="live">
-                    <i />
-                    live, follows the stage and Tune
-                  </span>
-                </h3>
+                  </pre>
+                </>
+              ),
+            },
+            {
+              title: "Render it",
+              summary: "Live code: it follows the stage and Tune. Copy and paste.",
+              action: (
                 <Button onClick={() => void copyText(snippet, "snippet")}>
                   {copied === "snippet" ? "Copied" : "Copy code"}
                 </Button>
-              </div>
-              <div className="snippet-tabs">
-                <SegmentedControl
-                  ariaLabel="Snippet language"
-                  size="small"
-                  options={[
-                    { value: "react", label: "React" },
-                    { value: "vanilla", label: "Vanilla TS" },
-                  ]}
-                  value={snippetLang}
-                  onChange={setSnippetLang}
-                />
-              </div>
-              <pre>
-                <code>{snippet}</code>
-              </pre>
-            </div>
-          </div>
-        </div>
+              ),
+              body: (
+                <>
+                  <div className="snippet-tabs">
+                    <SegmentedControl
+                      ariaLabel="Snippet language"
+                      size="small"
+                      options={[
+                        { value: "react", label: "React" },
+                        { value: "vanilla", label: "Vanilla TS" },
+                      ]}
+                      value={snippetLang}
+                      onChange={setSnippetLang}
+                    />
+                    <span className="live">
+                      <i />
+                      live, follows the stage and Tune
+                    </span>
+                  </div>
+                  <pre>
+                    <code>{snippet}</code>
+                  </pre>
+                </>
+              ),
+            },
+          ]}
+        />
 
         <h2 id="states" className="sec">
           One plate, four states
@@ -871,7 +886,8 @@ node.smoothingTimeConstant = 0.5;`}</code>
           <div className="sec-side">
             <p className="sec-sub">
               The whole <code>ChladniParams</code> surface, grouped as in the API. Every change hits
-              the stage and the quick-start snippet live; hover ⓘ for what a control does.
+              the stage and the quick-start snippet live; hover the info icon for what a control
+              does.
             </p>
             <div className="tune-actions">
               <Button
@@ -892,23 +908,25 @@ node.smoothingTimeConstant = 0.5;`}</code>
           <div className="tune-groups">
             {groups.map(([g, entries]) => (
               <div className="gcard" key={g}>
-                <div className="gside">
+                <div className="ghead">
                   <b>{GROUP_LABEL[g] ?? g}</b>
                   <p>{GROUP_DESC[g]}</p>
                 </div>
                 <div className="gbody">
-                  {entries.map(([path, entry]) => (
-                    <Control
-                      key={path}
-                      entry={entry}
-                      value={getPath(params, path)}
-                      onChange={(v) => {
-                        const p: DeepPartial<ChladniParams> = {};
-                        setPath(p, path, v);
-                        applyPatch(p);
-                      }}
-                    />
-                  ))}
+                  {[...entries]
+                    .sort((a, b) => KIND_ORDER[a[1].kind] - KIND_ORDER[b[1].kind])
+                    .map(([path, entry]) => (
+                      <Control
+                        key={path}
+                        entry={entry}
+                        value={getPath(params, path)}
+                        onChange={(v) => {
+                          const p: DeepPartial<ChladniParams> = {};
+                          setPath(p, path, v);
+                          applyPatch(p);
+                        }}
+                      />
+                    ))}
                 </div>
               </div>
             ))}
@@ -933,7 +951,7 @@ node.smoothingTimeConstant = 0.5;`}</code>
               <b>
                 Live levels{" "}
                 <span className="tip" data-tip="Loudest partial in each band, right now.">
-                  ⓘ
+                  <InfoIcon />
                 </span>
               </b>
               {LEVEL_BANDS.map((b) => {
@@ -943,7 +961,7 @@ node.smoothingTimeConstant = 0.5;`}</code>
                     <span className="lvl-n">
                       {b.label}{" "}
                       <span className="tip" data-tip={b.tip}>
-                        ⓘ
+                        <InfoIcon />
                       </span>
                     </span>
                     <span className="lvl-bar">
@@ -967,48 +985,52 @@ node.smoothingTimeConstant = 0.5;`}</code>
           Open the docs →
         </a>
 
-        <h2 id="faq" className="sec">
-          Questions
-        </h2>
-        <details className="faq" open>
-          <summary>How is the plate built?</summary>
-          <p className="sec-sub">Four views, each one live with the same simulated voice.</p>
-          <div className="how" style={plateRadiusStyle}>
-            {demos.map((d, i) => (
-              <figure key={i}>
-                <span className="stepnum">{i + 1}</span>
-                <ChladniPlate
-                  params={withStageLook(d.p as DeepPartial<ChladniParams>)}
-                  analyser={simVoice}
-                />
-                <figcaption>
-                  <b>{d.title}</b>
-                  {d.cap}
-                </figcaption>
-              </figure>
+        {SHOW_FAQ && (
+          <>
+            <h2 id="faq" className="sec">
+              Questions
+            </h2>
+            <details className="faq" open>
+              <summary>How is the plate built?</summary>
+              <p className="sec-sub">Four views, each one live with the same simulated voice.</p>
+              <div className="how" style={plateRadiusStyle}>
+                {demos.map((d, i) => (
+                  <figure key={i}>
+                    <span className="stepnum">{i + 1}</span>
+                    <ChladniPlate
+                      params={withStageLook(d.p as DeepPartial<ChladniParams>)}
+                      analyser={simVoice}
+                    />
+                    <figcaption>
+                      <b>{d.title}</b>
+                      {d.cap}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+              <p className="pipeline">
+                <b>Audio → FFT → partials → modes → resonance → sand.</b> An analyser node measures
+                the spectrum; the strongest peaks become <b>partials</b>. Each partial shakes the
+                plate's natural shapes. When a note matches one of those shapes the figure is clean,
+                between two it blends, far from all it trembles. The driven displacement field is
+                drawn as a standing wave; thousands of grains jitter in proportion to local
+                vibration and drift down its gradient until only the nodal lines hold sand.
+              </p>
+            </details>
+            {FAQ.map((f) => (
+              <details key={f.q} className="faq">
+                <summary>{f.q}</summary>
+                <p className="pipeline">{f.a}</p>
+              </details>
             ))}
-          </div>
-          <p className="pipeline">
-            <b>Audio → FFT → partials → modes → resonance → sand.</b> An analyser node measures the
-            spectrum; the strongest peaks become <b>partials</b>. Each partial shakes the plate's
-            natural shapes. When a note matches one of those shapes the figure is clean, between two
-            it blends, far from all it trembles. The driven displacement field is drawn as a
-            standing wave; thousands of grains jitter in proportion to local vibration and drift
-            down its gradient until only the nodal lines hold sand.
-          </p>
-        </details>
-        {FAQ.map((f) => (
-          <details key={f.q} className="faq">
-            <summary>{f.q}</summary>
-            <p className="pipeline">{f.a}</p>
-          </details>
-        ))}
+          </>
+        )}
       </main>
       <footer>
         <span>chladni · MIT</span>
         <span>
           <a href="#use">Quick start</a> · <a href="#/docs">Docs</a> ·{" "}
-          <a href="https://github.com/<user>/chladni">GitHub</a>
+          <a href="https://github.com/atharvapatil/chladni-orb">GitHub</a>
         </span>
       </footer>
     </>
@@ -1024,18 +1046,21 @@ function Control({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
+  const label = (
+    <span className="ctl-label">
+      {entry.label}{" "}
+      <span className="tip" data-tip={entry.help}>
+        <InfoIcon />
+      </span>
+    </span>
+  );
   if (entry.kind === "number") {
     const v = typeof value === "number" ? value : (entry.min ?? 0);
     const digits = entry.step !== undefined && entry.step < 1 ? 2 : 0;
     return (
       <label className="ctl" title={entry.help}>
         <span className="row">
-          <span>
-            {entry.label}{" "}
-            <span className="tip" data-tip={entry.help}>
-              ⓘ
-            </span>
-          </span>
+          {label}
           <span className="val">
             {v.toFixed(digits)}
             {entry.unit ? ` ${entry.unit}` : ""}
@@ -1055,17 +1080,14 @@ function Control({
   if (entry.kind === "enum") {
     return (
       <label className="ctl" title={entry.help}>
-        <span className="row">
-          <span>
-            {entry.label}{" "}
-            <span className="tip" data-tip={entry.help}>
-              ⓘ
-            </span>
-          </span>
-        </span>
+        <span className="row">{label}</span>
         <SegmentedControl
           ariaLabel={entry.label}
-          options={entry.options!}
+          size="small"
+          options={entry.options!.map((o) => ({
+            value: o,
+            label: o.charAt(0).toUpperCase() + o.slice(1),
+          }))}
           value={String(value)}
           onChange={onChange}
         />
@@ -1074,29 +1096,24 @@ function Control({
   }
   if (entry.kind === "boolean") {
     return (
-      <label className="ctl bool" title={entry.help}>
+      <label className="ctl" title={entry.help}>
+        <span className="row">{label}</span>
         <Switch checked={Boolean(value)} onChange={onChange} ariaLabel={entry.label} />
-        <span>
-          {entry.label}{" "}
-          <span className="tip" data-tip={entry.help}>
-            ⓘ
-          </span>
-        </span>
       </label>
     );
   }
   if (entry.kind === "color") {
+    const hex = typeof value === "string" ? value : "#f3ead8";
     return (
       <label className="ctl" title={entry.help}>
-        {entry.label}{" "}
-        <span className="tip" data-tip={entry.help}>
-          ⓘ
-        </span>{" "}
-        <input
-          type="color"
-          value={typeof value === "string" ? value : "#f3ead8"}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <span className="row">
+          {label}
+          <span className="val">{hex.toUpperCase()}</span>
+        </span>
+        <span className="ctl-swatch">
+          <input type="color" value={hex} onChange={(e) => onChange(e.target.value)} />
+          <span>{entry.label === "Color" ? "Sand" : entry.label.replace(/ colou?r$/i, "")}</span>
+        </span>
       </label>
     );
   }
