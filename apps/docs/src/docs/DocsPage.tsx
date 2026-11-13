@@ -7,7 +7,7 @@ import {
   type ChladniParams,
   type ChladniPlateHandle,
   type DeepPartial,
-} from "@chladni/react";
+} from "chladni-orb";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../components/Button";
 import { SegmentedControl } from "../components/SegmentedControl";
@@ -91,7 +91,7 @@ function codeFor(b: ReturnType<typeof build>, lang: "react" | "vanilla"): string
     ...(hasParams ? [`params={${p.replace(/\n/g, "\n  ")}}`] : []),
   ];
   if (lang === "react") {
-    return `import { ChladniPlate, createMicAnalyser } from "@chladni/react";
+    return `import { ChladniPlate, createMicAnalyser } from "chladni-orb";
 
 ${source.join("\n")}
 
@@ -105,7 +105,7 @@ ${source.join("\n")}
     ...(b.particleTexSize !== null ? [`particleTexSize: ${b.particleTexSize}`] : []),
     ...(hasParams ? [`params: ${p.replace(/\n/g, "\n  ")}`] : []),
   ];
-  return `import { createChladniPlate, createMicAnalyser } from "@chladni/core";
+  return `import { createChladniPlate, createMicAnalyser } from "chladni-orb-core";
 
 ${source.join("\n")}
 

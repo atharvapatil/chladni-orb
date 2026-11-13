@@ -3,7 +3,6 @@ import {
   DEFAULT_PARAMS,
   PARAM_SCHEMA,
   PRESETS,
-  createElementAnalyser,
   createMicAnalyser,
   mergeParams,
   type ChladniParams,
@@ -11,7 +10,7 @@ import {
   type DeepPartial,
   type ParamSchemaEntry,
   type SpectrumSource,
-} from "@chladni/react";
+} from "chladni-orb";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Button } from "./components/Button";
 import { InfoIcon } from "./components/InfoIcon";
@@ -21,7 +20,7 @@ import { Steps } from "./components/Steps";
 import { Switch } from "./components/Switch";
 import { renderSampleBuffer } from "./sample";
 import { SITE_PARAMS, THEME_LOOK, initialTheme, simVoice, useTheme } from "./site";
-import { renderVoiceBuffer } from "./voice";
+import { loadSpeech } from "./speech";
 import "./styles.css";
 
 const GROUP_ORDER = ["listening", "plate", "studio", "lab", "look", "ink"] as const;
@@ -166,9 +165,6 @@ const LEVEL_BANDS = [
   },
 ] as const;
 
-let voiceBuf: Promise<AudioBuffer> | null = null;
-const loadVoice = () => (voiceBuf ??= renderVoiceBuffer());
-
 export function App() {
   const [theme, toggleTheme] = useTheme();
   const initial = useMemo(() => {
@@ -196,8 +192,6 @@ export function App() {
   const [status, setStatus] = useState("warming up");
   const plateRef = useRef<ChladniPlateHandle | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
-  const audioElRef = useRef<HTMLAudioElement | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const applyPatch = useCallback((p: DeepPartial<ChladniParams>) => {
     setPatch((prev) => {
@@ -283,7 +277,6 @@ export function App() {
   const stopSource = useCallback(() => {
     stopRef.current?.();
     stopRef.current = null;
-    audioElRef.current?.pause();
     setSource(null);
     setSourceName("none");
   }, []);
@@ -298,7 +291,7 @@ export function App() {
     }
     const ctx = new AudioContext();
     previewRef.current = { ctx, src: null };
-    const buffer = await loadVoice();
+    const buffer = await loadSpeech(ctx);
     if (previewRef.current?.ctx !== ctx) {
       void ctx.close();
       return;
@@ -319,7 +312,8 @@ export function App() {
   const pickSim = useCallback(async () => {
     stopSource();
     const ctx = new AudioContext();
-    const buffer = await renderVoiceBuffer();
+    setSourceName("speech");
+    const buffer = await loadSpeech(ctx);
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
@@ -330,7 +324,7 @@ export function App() {
     analyser.connect(ctx.destination);
     src.start();
     setSource(analyser);
-    setSourceName("simulated voice");
+    setSourceName("speech");
     stopRef.current = () => {
       src.stop();
       void ctx.close();
@@ -372,25 +366,6 @@ export function App() {
       void ctx.close();
     };
   }, [stopSource]);
-
-  const pickFile = useCallback(
-    async (file: File) => {
-      stopSource();
-      const el = new Audio(URL.createObjectURL(file));
-      el.loop = true;
-      audioElRef.current = el;
-      const h = createElementAnalyser(el);
-      await el.play();
-      setSource(h.analyser);
-      setSourceName(`file: ${file.name}`);
-      stopRef.current = () => {
-        h.stop();
-        void h.context.close();
-        el.pause();
-      };
-    },
-    [stopSource],
-  );
 
   // ?source=sim boots straight into a source (for screenshots)
   useEffect(() => {
@@ -450,11 +425,7 @@ export function App() {
   const snippet = useMemo(() => {
     const p = toJs(tunedPatch, 2);
     const hasParams = p !== "{}";
-    const kind = sourceName.startsWith("file")
-      ? "sample"
-      : sourceName === "sample" || sourceName === "simulated voice"
-        ? sourceName
-        : "microphone";
+    const kind = sourceName === "sample" || sourceName === "speech" ? sourceName : "microphone";
     const [sourceLine, analyserExpr] = {
       microphone: [
         "const mic = await createMicAnalyser(); // or any AnalyserNode, see step 2",
@@ -464,18 +435,18 @@ export function App() {
         "const sample = createElementAnalyser(audioEl); // any <audio> / <video> element",
         "sample.analyser",
       ],
-      "simulated voice": [
-        "const voice = new SimulatedVoice(); // demo source, no audio needed",
-        "voice",
+      speech: [
+        "const speech = createElementAnalyser(audioEl); // any recording, e.g. the agent's TTS",
+        "speech.analyser",
       ],
     }[kind];
     const helper = {
       microphone: "createMicAnalyser",
       sample: "createElementAnalyser",
-      "simulated voice": "SimulatedVoice",
+      speech: "createElementAnalyser",
     }[kind];
     if (snippetLang === "react") {
-      return `import { ChladniPlate, ${helper} } from "@chladni/react";
+      return `import { ChladniPlate, ${helper} } from "chladni-orb";
 
 ${sourceLine}
 
@@ -484,7 +455,7 @@ ${sourceLine}
   style={{ width: ${plateSize}, height: ${plateSize} }}
 />`;
     }
-    return `import { createChladniPlate, ${helper} } from "@chladni/core";
+    return `import { createChladniPlate, ${helper} } from "chladni-orb-core";
 
 ${sourceLine}
 const plate = createChladniPlate(document.querySelector("canvas")${hasParams ? `, {\n  params: ${p.replace(/\n/g, "\n  ")},\n}` : ""});
@@ -569,8 +540,8 @@ plate.setAnalyser(${analyserExpr});`;
               Quick start →
             </a>
             <span className="install">
-              <span>$</span>npm i @chladni/react
-              <Button onClick={() => void copyText("npm i @chladni/react", "install")}>
+              <span>$</span>npm i chladni-orb
+              <Button onClick={() => void copyText("npm i chladni-orb", "install")}>
                 {copied === "install" ? "Copied" : "Copy"}
               </Button>
             </span>
@@ -611,23 +582,19 @@ plate.setAnalyser(${analyserExpr});`;
                 ariaLabel="Voice source"
                 options={[
                   { value: "none", label: "Off" },
-                  { value: "sample", label: "Sample" },
+                  { value: "sample", label: "Drums" },
+                  { value: "speech", label: "Speech" },
                   { value: "microphone", label: "Microphone" },
-                  { value: "file", label: "Your file" },
-                  { value: "simulated voice", label: "Simulated voice" },
                 ]}
                 value={
-                  sourceName === "none"
-                    ? "none"
-                    : sourceName.startsWith("file")
-                      ? "file"
-                      : sourceName
+                  ["none", "sample", "speech", "microphone"].includes(sourceName)
+                    ? sourceName
+                    : "none"
                 }
                 onChange={(v) => {
                   if (v === "none") stopSource();
                   else if (v === "sample") void pickSample();
                   else if (v === "microphone") void pickMic();
-                  else if (v === "file") fileRef.current?.click();
                   else void pickSim();
                 }}
               />
@@ -722,16 +689,6 @@ plate.setAnalyser(${analyserExpr});`;
             </div>
           </div>
           <div className="status">{status}</div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="audio/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void pickFile(f);
-            }}
-          />
         </section>
 
         <h2 id="use" className="sec">
@@ -748,7 +705,7 @@ plate.setAnalyser(${analyserExpr});`;
               summary: "One package for React, or the engine on its own.",
               action: (
                 <Button
-                  onClick={() => void copyText("npm i @chladni/react @chladni/core", "install2")}
+                  onClick={() => void copyText("npm i chladni-orb chladni-orb-core", "install2")}
                 >
                   {copied === "install2" ? "Copied" : "Copy"}
                 </Button>
@@ -756,13 +713,13 @@ plate.setAnalyser(${analyserExpr});`;
               body: (
                 <>
                   <p>
-                    <code>@chladni/react</code> is the component; it re-exports everything from{" "}
-                    <code>@chladni/core</code>, the framework-free engine.
+                    <code>chladni-orb</code> is the component; it re-exports everything from{" "}
+                    <code>chladni-orb-core</code>, the framework-free engine.
                   </p>
                   <pre>
-                    <code>{`npm i @chladni/react @chladni/core
+                    <code>{`npm i chladni-orb chladni-orb-core
 # engine only, no React:
-npm i @chladni/core`}</code>
+npm i chladni-orb-core`}</code>
                   </pre>
                 </>
               ),
@@ -779,7 +736,7 @@ npm i @chladni/core`}</code>
                   <pre>
                     <code>{`import {
   createMicAnalyser, createElementAnalyser, SimulatedVoice,
-} from "@chladni/react";
+} from "chladni-orb";
 
 const mic = await createMicAnalyser();      // the caller
 const tts = createElementAnalyser(audioEl); // the agent's playback
@@ -884,11 +841,6 @@ node.smoothingTimeConstant = 0.5;`}</code>
             Tune every parameter
           </h2>
           <div className="sec-side">
-            <p className="sec-sub">
-              The whole <code>ChladniParams</code> surface, grouped as in the API. Every change hits
-              the stage and the quick-start snippet live; hover the info icon for what a control
-              does.
-            </p>
             <div className="tune-actions">
               <Button
                 onClick={() => {

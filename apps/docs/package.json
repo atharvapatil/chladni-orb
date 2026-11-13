@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@chladni/core": "workspace:*",
-    "@chladni/react": "workspace:*",
+    "chladni-orb-core": "workspace:*",
+    "chladni-orb": "workspace:*",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/geist-mono": "5.3.0",
     "react": "19.3.1",

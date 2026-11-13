@@ -1,7 +1,7 @@
 {
-  "name": "@chladni/react",
+  "name": "chladni-orb",
   "version": "0.0.0",
-  "description": "React wrapper for @chladni/core \u2014 <ChladniPlate />",
+  "description": "React wrapper for chladni-orb-core \u2014 <ChladniPlate />",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -24,7 +24,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@chladni/core": "workspace:*"
+    "chladni-orb-core": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18"

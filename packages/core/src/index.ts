@@ -15,12 +15,15 @@ export {
 } from "./params";
 export * from "./audio";
 export * from "./physics";
+export { createChladniPlate, type ChladniPlate, type ChladniPlateOptions } from "./ChladniPlate";
 export {
-  createChladniPlate,
+  AGENT_STATES,
+  isQuiet,
+  needsFreshSand,
+  pulseFor,
+  wantsRelax,
   type AgentState,
-  type ChladniPlate,
-  type ChladniPlateOptions,
-} from "./ChladniPlate";
+} from "./physics/agentState";
 export {
   createElementAnalyser,
   createMicAnalyser,

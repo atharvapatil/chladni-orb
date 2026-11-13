@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ["react", "react-dom", "@chladni/core"],
+  external: ["react", "react-dom", "chladni-orb-core"],
 });

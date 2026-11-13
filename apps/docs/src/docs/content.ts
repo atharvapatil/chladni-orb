@@ -4,7 +4,7 @@ import {
   PRESETS,
   type ChladniParams,
   type ParamSchemaEntry,
-} from "@chladni/react";
+} from "chladni-orb";
 
 /** the UI control for an entry */
 export type Control =
@@ -460,7 +460,7 @@ const PROP_ENTRIES: DocEntry[] = [
       ],
     },
     initial: "voice",
-    example: `import { createMicAnalyser, createElementAnalyser, SimulatedVoice } from "@chladni/react";
+    example: `import { createMicAnalyser, createElementAnalyser, SimulatedVoice } from "chladni-orb";
 
 const mic = await createMicAnalyser();        // the caller
 const tts = createElementAnalyser(audioEl);   // the agent's own playback

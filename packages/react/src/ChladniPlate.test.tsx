@@ -19,13 +19,13 @@ const fake = {
   supported: true,
 };
 
-vi.mock("@chladni/core", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@chladni/core")>();
+vi.mock("chladni-orb-core", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("chladni-orb-core")>();
   return { ...mod, createChladniPlate: vi.fn(() => fake) };
 });
 
-import { createChladniPlate, DEFAULT_PARAMS } from "@chladni/core";
-import type { ChladniParams } from "@chladni/core";
+import { createChladniPlate, DEFAULT_PARAMS } from "chladni-orb-core";
+import type { ChladniParams } from "chladni-orb-core";
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -105,6 +105,50 @@ describe("ChladniPlate", () => {
       root.render(<ChladniPlate state="listening" />);
     });
     expect(fake.setState).toHaveBeenLastCalledWith("listening");
+  });
+
+  it("hands the handle to onReady and to a ref, and clears the ref on unmount", async () => {
+    root = createRoot(container);
+    const ref = { current: null as unknown };
+    const onReady = vi.fn();
+    await act(async () => {
+      root.render(<ChladniPlate ref={ref as never} onReady={onReady} />);
+    });
+    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(onReady.mock.calls[0]![0]).toBe(fake);
+    expect(ref.current).toBe(fake);
+    act(() => root.unmount());
+    expect(ref.current).toBeNull();
+    root = createRoot(container);
+  });
+
+  it("forwards canvas attributes and leaves the engine alone when props are omitted", async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root.render(<ChladniPlate className="orb" aria-label="Agent" />);
+    });
+    const canvas = container.querySelector("canvas")!;
+    expect(canvas.className).toBe("orb");
+    expect(canvas.getAttribute("aria-label")).toBe("Agent");
+    expect(fake.setState).not.toHaveBeenCalled();
+    expect(fake.freeze).not.toHaveBeenCalled();
+    expect(fake.setAnalyser).not.toHaveBeenCalled();
+  });
+
+  it("passes mount-time options and the initial state to createChladniPlate", async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <ChladniPlate state="idle" pixelRatio={1} fieldResolution={64} particleTexSize={32} />,
+      );
+    });
+    const opts = (createChladniPlate as ReturnType<typeof vi.fn>).mock.calls.at(-1)![1];
+    expect(opts).toMatchObject({
+      state: "idle",
+      pixelRatio: 1,
+      fieldResolution: 64,
+      particleTexSize: 32,
+    });
   });
 
   it("a params change while frozen keeps the plate frozen", async () => {

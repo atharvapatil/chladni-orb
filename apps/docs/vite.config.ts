@@ -7,10 +7,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@chladni/core": fileURLToPath(new URL("../../packages/core/src/index.ts", import.meta.url)),
-      "@chladni/react": fileURLToPath(
-        new URL("../../packages/react/src/index.ts", import.meta.url),
+      "chladni-orb-core": fileURLToPath(
+        new URL("../../packages/core/src/index.ts", import.meta.url),
       ),
+      "chladni-orb": fileURLToPath(new URL("../../packages/react/src/index.ts", import.meta.url)),
     },
   },
 });

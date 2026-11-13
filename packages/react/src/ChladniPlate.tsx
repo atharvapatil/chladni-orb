@@ -7,7 +7,7 @@ import {
   type ChladniPlate as CorePlate,
   type DeepPartial,
   type SpectrumSource,
-} from "@chladni/core";
+} from "chladni-orb-core";
 import {
   forwardRef,
   useEffect,

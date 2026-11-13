@@ -1,27 +1,4 @@
 export { ChladniPlate, useChladniPlate, type ChladniPlateProps } from "./ChladniPlate";
-export {
-  DEFAULT_PARAMS,
-  PARAM_SCHEMA,
-  PRESETS,
-  SimulatedVoice,
-  createElementAnalyser,
-  createMicAnalyser,
-  mergeParams,
-  type AnalyserHandle,
-  type ChladniParams,
-  type ChladniPlate as ChladniPlateHandle,
-  type AgentState,
-  type ChladniPlateOptions,
-  type DeepPartial,
-  type Halo,
-  type IdleBehaviour,
-  type Look,
-  type MultiTone,
-  type ParamSchemaEntry,
-  type PlateDrive,
-  type PlateModelKind,
-  type PlateShape,
-  type Preset,
-  type SpectralPartial,
-  type SpectrumSource,
-} from "@chladni/core";
+// the whole engine, so React apps need only this package
+export * from "chladni-orb-core";
+export type { ChladniPlate as ChladniPlateHandle } from "chladni-orb-core";

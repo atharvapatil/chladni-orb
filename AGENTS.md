@@ -3,9 +3,9 @@
 ## Repo layout
 
 ```
-packages/core    @chladni/core — framework-agnostic engine (audio analysis,
+packages/core    chladni-orb-core — framework-agnostic engine (audio analysis,
                  plate physics, WebGL2 rendering). Plain TypeScript, no React.
-packages/react   @chladni/react — <ChladniPlate /> wrapper over @chladni/core.
+packages/react   chladni-orb — <ChladniPlate /> wrapper over chladni-orb-core.
 apps/docs        Vite + React playground / docs site (private, GitHub Pages).
 docs/research    Research notes: figura-parameters.md, figura-behaviour.md,
                  plate-physics.md, figura-native-findings.md (Gate 0: no RE).
@@ -35,8 +35,11 @@ pnpm release          # build + changeset publish
   `exactOptionalPropertyTypes`) via `tsconfig.base.json`.
 - No default exports in library code (`packages/*`); named exports only.
 - Tests live next to source as `*.test.ts` (vitest, node environment).
+  `packages/*/src/api.test.ts(x)` pin the public export list: adding or
+  removing an export must update them and add a changeset.
+- `pnpm check` runs everything CI runs. Release process: `RELEASING.md`.
 - Dependencies are pinned to exact versions; prefer releases ≥7 days old.
-- `@chladni/react` depends on `@chladni/core` via `workspace:*`;
+- `chladni-orb` depends on `chladni-orb-core` via `workspace:*`;
   react is a peer dependency (>=18).
 - Docs site base path is set by `VITE_BASE` (CI uses `/chladni/` for
   GitHub Pages).

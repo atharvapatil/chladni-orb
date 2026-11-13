@@ -1,4 +1,4 @@
-import { SimulatedVoice, type ChladniParams, type DeepPartial } from "@chladni/react";
+import { SimulatedVoice, type ChladniParams, type DeepPartial } from "chladni-orb";
 import { useCallback, useEffect, useState } from "react";
 
 export type Theme = "dark" | "light";

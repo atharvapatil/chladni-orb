@@ -1,4 +1,4 @@
-# @chladni/core
+# chladni-orb-core
 
 Voice-reactive Chladni plate engine for the web. Audio in, sand figures
 out: the strongest partials of a live spectrum drive the vibration modes
@@ -9,13 +9,13 @@ in a single WebGL2 pass pipeline.
 ## Install
 
 ```sh
-npm install @chladni/core
+npm install chladni-orb-core
 ```
 
 ## Usage
 
 ```ts
-import { createChladniPlate, SimulatedVoice, createMicAnalyser } from "@chladni/core";
+import { createChladniPlate, SimulatedVoice, createMicAnalyser } from "chladni-orb-core";
 
 const plate = createChladniPlate(document.querySelector("canvas")!);
 
@@ -107,7 +107,7 @@ values.
 | `lab-aluminium`        | Free-edge aluminium disc in real units (Lab model).                                      |
 
 ```ts
-import { PRESETS } from "@chladni/core";
+import { PRESETS } from "chladni-orb-core";
 plate.setParams(PRESETS["drumhead"].params);
 ```
 

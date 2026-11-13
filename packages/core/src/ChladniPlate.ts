@@ -4,17 +4,16 @@ import { DEFAULT_PARAMS, mergeParams, type ChladniParams, type DeepPartial } fro
 import { AnalyticalModel } from "./physics/modes";
 import { LabModel } from "./physics/lab/LabModel";
 import { ResonanceMixer } from "./physics/ResonanceMixer";
+import {
+  isQuiet,
+  needsFreshSand,
+  pulseFor,
+  stepRelax,
+  wantsRelax,
+  type AgentState,
+} from "./physics/agentState";
 import { Renderer } from "./render/Renderer";
 import { getSharedGL } from "./render/context";
-
-/**
- * The plate as a voice agent's presence.
- * - `talking`: the normal plate, driven by the analyser.
- * - `idle`: the sound is ignored and the sand rests, spread evenly, shivering.
- * - `connecting`: like idle, with pulses rolling out from the centre.
- * - `listening`: like idle, with pulses drawing in from the rim.
- */
-export type AgentState = "idle" | "connecting" | "listening" | "talking";
 
 export interface ChladniPlateOptions {
   params?: DeepPartial<ChladniParams>;
@@ -140,8 +139,7 @@ export function createChladniPlate(
     needsFrame = false;
 
     // in the quiet states the sound is ignored: the plate rests on its own
-    const quiet = state !== "talking";
-    const partials = pa && !quiet ? pa.update(dt, params.listening) : [];
+    const partials = pa && !isQuiet(state) ? pa.update(dt, params.listening) : [];
     lastPartials = partials;
     let modes;
     let atlas = null;
@@ -171,13 +169,8 @@ export function createChladniPlate(
     level.tremor = mix.tremor;
     // relax eases in once the sound has gone (and its decay tail with it),
     // and snaps back out the moment partials return
-    const wantRelax =
-      !params.listening.freeze &&
-      (quiet || (params.listening.idle === "relax" && mix.energy < 0.02));
-    const relaxRate = wantRelax ? dt / 0.6 : dt / 0.15;
-    relax += ((wantRelax ? 1 : 0) - relax) * Math.min(1, relaxRate);
-    if (relax < 0.001) relax = 0;
-    const pulse = state === "connecting" ? 1 : state === "listening" ? -1 : 0;
+    relax = stepRelax(relax, wantsRelax(state, params, mix.energy), dt);
+    const pulse = pulseFor(state);
     renderer.render({
       modes,
       atlas,
@@ -212,16 +205,7 @@ export function createChladniPlate(
     setParams(patch) {
       const prev = params;
       params = mergeParams(params, patch);
-      // fresh sand on model or partial-count change (Figura rule), and
-      // whenever the outline changes so the grains fill the new shape
-      if (
-        params.plate.model !== prev.plate.model ||
-        params.listening.partials !== prev.listening.partials ||
-        params.plate.shape !== prev.plate.shape ||
-        params.plate.aspect !== prev.plate.aspect
-      ) {
-        renderer.resetSand();
-      }
+      if (needsFreshSand(prev, params)) renderer.resetSand();
       needsFrame = true;
     },
     getParams: () => params,

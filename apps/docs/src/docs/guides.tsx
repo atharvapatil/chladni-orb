@@ -1,4 +1,4 @@
-import { PRESETS } from "@chladni/react";
+import { PRESETS } from "chladni-orb";
 import type { ReactNode } from "react";
 import { Steps } from "../components/Steps";
 
@@ -52,7 +52,7 @@ export const GUIDES: Guide[] = [
             before audio can start. That is a browser rule, not ours.
           </li>
           <li>
-            React 18 or newer for <code>@chladni/react</code>. The engine itself has no dependencies
+            React 18 or newer for <code>chladni-orb</code>. The engine itself has no dependencies
             and works without React.
           </li>
         </ul>
@@ -64,12 +64,12 @@ export const GUIDES: Guide[] = [
         <h3>The two packages</h3>
         <ul>
           <li>
-            <code>@chladni/react</code>: the <code>&lt;ChladniPlate /&gt;</code> component. It
+            <code>chladni-orb</code>: the <code>&lt;ChladniPlate /&gt;</code> component. It
             re-exports everything from the engine, so React apps only need this one.
           </li>
           <li>
-            <code>@chladni/core</code>: the engine. <code>createChladniPlate(canvas)</code> and the
-            same handle, for any framework or none.
+            <code>chladni-orb-core</code>: the engine. <code>createChladniPlate(canvas)</code> and
+            the same handle, for any framework or none.
           </li>
         </ul>
         <p>
@@ -91,9 +91,9 @@ export const GUIDES: Guide[] = [
               summary: "One package for React, or the engine on its own.",
               body: (
                 <pre>
-                  <code>{`npm i @chladni/react @chladni/core
+                  <code>{`npm i chladni-orb chladni-orb-core
 # engine only, no React:
-npm i @chladni/core`}</code>
+npm i chladni-orb-core`}</code>
                 </pre>
               ),
             },
@@ -110,7 +110,7 @@ npm i @chladni/core`}</code>
                   <pre>
                     <code>{`import {
   createMicAnalyser, createElementAnalyser, SimulatedVoice,
-} from "@chladni/react";
+} from "chladni-orb";
 
 const mic = await createMicAnalyser();      // the caller's microphone
 const tts = createElementAnalyser(audioEl); // an <audio> element, e.g. the agent's voice
@@ -125,7 +125,7 @@ const demo = new SimulatedVoice();          // a pretend voice, no audio needed`
               body: (
                 <>
                   <pre>
-                    <code>{`import { ChladniPlate } from "@chladni/react";
+                    <code>{`import { ChladniPlate } from "chladni-orb";
 
 <ChladniPlate
   analyser={mic.analyser}
@@ -135,7 +135,7 @@ const demo = new SimulatedVoice();          // a pretend voice, no audio needed`
                   </pre>
                   <p>Without React, the same thing on a canvas you own:</p>
                   <pre>
-                    <code>{`import { createChladniPlate } from "@chladni/core";
+                    <code>{`import { createChladniPlate } from "chladni-orb-core";
 
 const plate = createChladniPlate(document.querySelector("canvas"), {
   params: { listening: { idle: "relax" } },
@@ -176,7 +176,7 @@ plate.setAnalyser(mic.analyser);`}</code>
           agent's sound connected the whole time and flip one prop.
         </p>
         <pre>
-          <code>{`import { ChladniPlate, type AgentState } from "@chladni/react";
+          <code>{`import { ChladniPlate, type AgentState } from "chladni-orb";
 
 const [state, setState] = useState<AgentState>("idle");
 
@@ -241,7 +241,7 @@ plate.setState("connecting");`}</code>
           points.
         </p>
         <pre>
-          <code>{`import { ChladniPlate, PRESETS } from "@chladni/react";
+          <code>{`import { ChladniPlate, PRESETS } from "chladni-orb";
 
 <ChladniPlate analyser={analyser} params={PRESETS["voice"].params} />
 

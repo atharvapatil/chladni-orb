@@ -1,21 +1,21 @@
-# @chladni/react
+# chladni-orb
 
-React wrapper for [`@chladni/core`](../core) — the voice-reactive Chladni
+React wrapper for [`chladni-orb-core`](../core) — the voice-reactive Chladni
 plate engine — as a `<ChladniPlate />` canvas component plus a
 `useChladniPlate` hook for the imperative handle.
 
 ## Install
 
 ```sh
-npm install @chladni/react
+npm install chladni-orb
 # the engine is a dependency; install it directly for its helpers/types
-npm install @chladni/core
+npm install chladni-orb-core
 ```
 
 ## Usage
 
 ```tsx
-import { ChladniPlate, SimulatedVoice, PRESETS } from "@chladni/react";
+import { ChladniPlate, SimulatedVoice, PRESETS } from "chladni-orb";
 
 function Demo() {
   return (
@@ -60,7 +60,7 @@ apps only need this package.
 | …canvas props     | `CanvasHTMLAttributes`                               | —                          | `className`, `style`, `aria-*`, event handlers, etc. are forwarded to the `<canvas>`. Size it with CSS — the plate follows its box via `ResizeObserver`.                                                                                                                                                 |
 
 `params` keys are documented in full in the
-[`@chladni/core` parameter reference](../core/README.md#parameter-reference).
+[`chladni-orb-core` parameter reference](../core/README.md#parameter-reference).
 
 ## The handle (`ChladniPlate`)
 
@@ -95,7 +95,7 @@ the canvas and call the handle directly.
 
 ## Browser requirements
 
-Same as `@chladni/core`: WebGL2 + `EXT_color_buffer_float` (or the
+Same as `chladni-orb-core`: WebGL2 + `EXT_color_buffer_float` (or the
 half-float fallback). Microphone requires a secure context + user
 gesture.
 
