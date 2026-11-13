@@ -2,6 +2,7 @@ import {
   createChladniPlate,
   DEFAULT_PARAMS,
   mergeParams,
+  type AgentState,
   type ChladniParams,
   type ChladniPlate as CorePlate,
   type DeepPartial,
@@ -23,6 +24,8 @@ export interface ChladniPlateProps extends Omit<
   /** merged over DEFAULT_PARAMS; deep-compared via JSON to avoid churn */
   params?: DeepPartial<ChladniParams>;
   analyser?: SpectrumSource | AnalyserNode | null;
+  /** idle | connecting | listening | talking (default). Quiet states ignore the analyser. */
+  state?: AgentState;
   frozen?: boolean;
   pixelRatio?: number;
   fieldResolution?: number;
@@ -35,6 +38,7 @@ export const ChladniPlate = forwardRef<CorePlate | null, ChladniPlateProps>(
     const {
       params,
       analyser,
+      state,
       frozen,
       pixelRatio,
       fieldResolution,
@@ -54,6 +58,7 @@ export const ChladniPlate = forwardRef<CorePlate | null, ChladniPlateProps>(
       if (!canvas) return;
       const plate = createChladniPlate(canvas, {
         ...(analyser !== undefined ? { analyser } : {}),
+        ...(state !== undefined ? { state } : {}),
         ...(pixelRatio !== undefined ? { pixelRatio } : {}),
         ...(fieldResolution !== undefined ? { fieldResolution } : {}),
         ...(particleTexSize !== undefined ? { particleTexSize } : {}),
@@ -71,16 +76,26 @@ export const ChladniPlate = forwardRef<CorePlate | null, ChladniPlateProps>(
     }, []);
 
     // `params` is authoritative: a diff over DEFAULT_PARAMS, so removing a
-    // key resets it rather than leaving a stale value
+    // key resets it rather than leaving a stale value. The `frozen` prop wins
+    // over params.listening.freeze, otherwise any params change would thaw a
+    // plate frozen through the prop.
+    const frozenRef = useRef(frozen);
+    frozenRef.current = frozen;
     useEffect(() => {
       if (paramsJson !== "null") {
-        plateRef.current?.setParams(mergeParams(DEFAULT_PARAMS, JSON.parse(paramsJson)));
+        const next = mergeParams(DEFAULT_PARAMS, JSON.parse(paramsJson));
+        if (frozenRef.current !== undefined) next.listening.freeze = frozenRef.current;
+        plateRef.current?.setParams(next);
       }
     }, [paramsJson]);
 
     useEffect(() => {
       if (analyser !== undefined) plateRef.current?.setAnalyser(analyser);
     }, [analyser]);
+
+    useEffect(() => {
+      if (state !== undefined) plateRef.current?.setState(state);
+    }, [state]);
 
     useEffect(() => {
       if (frozen !== undefined) plateRef.current?.freeze(frozen);

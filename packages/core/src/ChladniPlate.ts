@@ -7,9 +7,20 @@ import { ResonanceMixer } from "./physics/ResonanceMixer";
 import { Renderer } from "./render/Renderer";
 import { getSharedGL } from "./render/context";
 
+/**
+ * The plate as a voice agent's presence.
+ * - `talking`: the normal plate, driven by the analyser.
+ * - `idle`: the sound is ignored and the sand rests, spread evenly, shivering.
+ * - `connecting`: like idle, with pulses rolling out from the centre.
+ * - `listening`: like idle, with pulses drawing in from the rim.
+ */
+export type AgentState = "idle" | "connecting" | "listening" | "talking";
+
 export interface ChladniPlateOptions {
   params?: DeepPartial<ChladniParams>;
   analyser?: SpectrumSource | AnalyserNode | null;
+  /** default `talking` */
+  state?: AgentState;
   /** cap on devicePixelRatio, default 2 */
   pixelRatio?: number;
   /** field texture size, default 256 */
@@ -24,6 +35,9 @@ export interface ChladniPlate {
   setParams(patch: DeepPartial<ChladniParams>): void;
   getParams(): ChladniParams;
   setAnalyser(a: SpectrumSource | AnalyserNode | null): void;
+  /** switch the agent state; the same grains carry over between states */
+  setState(state: AgentState): void;
+  getState(): AgentState;
   freeze(on: boolean): void;
   /** factory params + fresh sand (Figura Reset semantics) */
   reset(): void;
@@ -58,6 +72,8 @@ export function createChladniPlate(
       setParams() {},
       getParams: () => params,
       setAnalyser() {},
+      setState() {},
+      getState: () => "talking",
       freeze() {},
       reset() {},
       resetSand() {},
@@ -91,6 +107,8 @@ export function createChladniPlate(
   let last = 0;
   let time = 0;
   let lastPartials: readonly SpectralPartial[] = [];
+  let relax = 0;
+  let state: AgentState = options?.state ?? "talking";
   const level = { energy: 0, tremor: 0, solving: false };
   let needsFrame = true;
 
@@ -121,7 +139,9 @@ export function createChladniPlate(
     if (reducedMotion && !needsFrame) return;
     needsFrame = false;
 
-    const partials = pa ? pa.update(dt, params.listening) : [];
+    // in the quiet states the sound is ignored: the plate rests on its own
+    const quiet = state !== "talking";
+    const partials = pa && !quiet ? pa.update(dt, params.listening) : [];
     lastPartials = partials;
     let modes;
     let atlas = null;
@@ -149,12 +169,23 @@ export function createChladniPlate(
     const mix = mixer.update(dt, partials, modes, params);
     level.energy = mix.energy;
     level.tremor = mix.tremor;
+    // relax eases in once the sound has gone (and its decay tail with it),
+    // and snaps back out the moment partials return
+    const wantRelax =
+      !params.listening.freeze &&
+      (quiet || (params.listening.idle === "relax" && mix.energy < 0.02));
+    const relaxRate = wantRelax ? dt / 0.6 : dt / 0.15;
+    relax += ((wantRelax ? 1 : 0) - relax) * Math.min(1, relaxRate);
+    if (relax < 0.001) relax = 0;
+    const pulse = state === "connecting" ? 1 : state === "listening" ? -1 : 0;
     renderer.render({
       modes,
       atlas,
       coeffs: mix.coeffs,
       energy: mix.energy,
       tremor: mix.tremor,
+      relax,
+      pulse,
       params,
       time,
       dpr: dprCap,
@@ -195,6 +226,11 @@ export function createChladniPlate(
     },
     getParams: () => params,
     setAnalyser: setSource,
+    setState(s) {
+      state = s;
+      needsFrame = true;
+    },
+    getState: () => state,
     freeze(on) {
       params = mergeParams(params, { listening: { freeze: on } });
       needsFrame = true;

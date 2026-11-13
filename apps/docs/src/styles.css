@@ -1,17 +1,17 @@
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #272727;
-  --panel: #1e1e1e;
-  --edge: #262a33;
+  --bg: #1c1917;
+  --panel: #292524;
+  --edge: rgba(255, 255, 255, 0.08);
   --border: #ffffff;
   --text: #e8e6e1;
-  --secondary: #5a5a5a;
+  --secondary: #d4d4d4;
   --tertiary: #464646;
   --accent: #ececec;
   --active-fg: #111;
-  --seg-bg: #1e1d1c;
-  --seg-active: #31302e;
+  --seg-bg: #27272a;
+  --seg-active: #474739;
   --seg-active-fg: #ffffff;
   --level: #2b2f3a;
   --oss-dot: #34a853;
@@ -21,7 +21,7 @@
   color-scheme: light;
   --bg: #fafafa;
   --panel: #ffffff;
-  --edge: #dcd9d2;
+  --edge: rgba(0, 0, 0, 0.12);
   --border: #000000;
   --text: #1b1b1f;
   --secondary: #969696;
@@ -371,26 +371,6 @@ main {
   gap: 12px;
   min-height: 320px;
   justify-content: center;
-}
-
-/* a plate with the Idle sand stacked over it, cross-fading */
-.plate-stack {
-  position: relative;
-  display: grid;
-}
-
-.plate-stack > * {
-  grid-area: 1 / 1;
-}
-
-.plate-stack > canvas:last-child {
-  opacity: 0;
-  transition: opacity 0.6s ease;
-  pointer-events: none;
-}
-
-.plate-stack.is-idle > canvas:last-child {
-  opacity: 1;
 }
 
 .stage canvas {

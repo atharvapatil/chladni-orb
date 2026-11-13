@@ -10,7 +10,7 @@ export interface Preset {
 export const PRESETS: Record<string, Preset> = {
   voice: {
     label: "Voice",
-    description: "Slow thin plate, off-centre exciter — diameters and petals for speech and song.",
+    description: "A slow, thin plate pushed off centre. Spokes and petals for speech and song.",
     params: {
       plate: {
         shape: "circle",

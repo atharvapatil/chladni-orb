@@ -5,6 +5,7 @@ export {
   type ChladniParams,
   type DeepPartial,
   type Halo,
+  type IdleBehaviour,
   type Look,
   type MultiTone,
   type ParamSchemaEntry,
@@ -14,7 +15,12 @@ export {
 } from "./params";
 export * from "./audio";
 export * from "./physics";
-export { createChladniPlate, type ChladniPlate, type ChladniPlateOptions } from "./ChladniPlate";
+export {
+  createChladniPlate,
+  type AgentState,
+  type ChladniPlate,
+  type ChladniPlateOptions,
+} from "./ChladniPlate";
 export {
   createElementAnalyser,
   createMicAnalyser,

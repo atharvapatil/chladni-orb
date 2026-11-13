@@ -150,6 +150,10 @@ uniform float uAlpha;
 uniform float uSettle;
 uniform float uMaxStep;
 uniform float uTremor;
+uniform sampler2D uDensity; // last frame's grain hits (screen space)
+uniform vec2 uDensityTexel;
+uniform float uRelax;       // 0..1: in silence, spread out evenly and shiver
+uniform float uPulse;       // +1 rings roll out from the centre, -1 in from the rim
 in vec2 vUv;
 out vec4 outColor;
 ${COMMON}
@@ -169,6 +173,46 @@ void main() {
   vec2 rnd = vec2(hash(seed), hash(seed + 1.7)) * 2.0 - 1.0;
   float gl2 = length(grad);
   vec2 drift = gl2 > 1e-6 ? uAlpha * hop * (grad / gl2) * min(1.0, gl2) : vec2(0.0);
+  if (uRelax > 0.001) {
+    // relax: walk away from crowded spots (down the density gradient, read
+    // over a wide stencil so single grains don't count) and shiver a little.
+    // The figure dissolves into an even spread with the same grains.
+    // stencil radius and orientation are randomised per grain and frame so
+    // the grains can't settle into the stencil's own lattice
+    float rr = 3.0 + 9.0 * hash(seed + 3.1);
+    float ang = 6.2831853 * hash(seed + 5.3);
+    vec2 e1 = vec2(cos(ang), sin(ang)) * uDensityTexel * rr;
+    vec2 e2 = vec2(-e1.y, e1.x);
+    float d1 = texture(uDensity, uv + e1).r - texture(uDensity, uv - e1).r;
+    float d2 = texture(uDensity, uv + e2).r - texture(uDensity, uv - e2).r;
+    vec2 dg = e1 * d1 + e2 * d2;
+    float dl = length(dg);
+    vec2 away = dl > 1e-6 ? -dg / dl * min(1.0, (abs(d1) + abs(d2)) * 0.5) : vec2(0.0);
+    drift -= uRelax * 0.0035 * away;
+    jit += uRelax * 0.005;
+  }
+  if (abs(uPulse) > 0.001) {
+    // agent states: two rings a half-period apart sweep the plate; grains in
+    // the band are shoved along the ring's direction of travel (the relax
+    // above then settles them back), with a slight twist so the ring turns
+    float r = length(pos);
+    vec2 radial = r > 1e-4 ? pos / r : vec2(0.0);
+    vec2 tang = vec2(-radial.y, radial.x);
+    // grains are pushed away from each ring's crest on both sides, so as a
+    // ring passes a grain it surges then returns: a travelling wave with no
+    // net drift, which keeps the spread even
+    float push = 0.0;
+    float band = 0.12;
+    for (int n = 0; n < 2; n++) {
+      float ph = fract(uTime / 2.2 + float(n) * 0.5) * 1.55 - 0.2;
+      float ring = uPulse > 0.0 ? ph : 1.15 - ph;
+      float fade = clamp((ring + 0.1) / 0.25, 0.0, 1.0) * (1.0 - clamp((ring - 0.9) / 0.35, 0.0, 1.0));
+      float d = (r - ring) / band;
+      push += d * exp(-d * d) * fade;
+    }
+    float twist = 0.3 * sin(uTime * 0.6 + r * 5.0);
+    drift -= push * 0.018 * (radial + twist * tang);
+  }
   vec2 np = pos + jit * rnd - drift;
   vec2 d = np - pos;
   float dl = length(d);

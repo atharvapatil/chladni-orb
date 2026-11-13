@@ -28,6 +28,10 @@ export interface RenderFrame {
   } | null;
   energy: number;
   tremor: number;
+  /** 0..1 — how far into the silent "relax" spread the sand is */
+  relax?: number;
+  /** +1 pulses out from the centre (connecting), -1 in from the rim (listening) */
+  pulse?: number;
   params: ChladniParams;
   time: number;
   dpr: number;
@@ -330,8 +334,12 @@ export class Renderer {
       gl.uniform1f(this.loc(this.updateProg, "uMaxStep"), 0.02);
       gl.uniform1f(this.loc(this.updateProg, "uTremor"), f.tremor);
       gl.uniform2f(this.loc(this.updateProg, "uFieldTexel"), 1 / this.fieldRes, 1 / this.fieldRes);
+      gl.uniform1f(this.loc(this.updateProg, "uRelax"), this.density ? (f.relax ?? 0) : 0);
+      gl.uniform1f(this.loc(this.updateProg, "uPulse"), f.pulse ?? 0);
+      gl.uniform2f(this.loc(this.updateProg, "uDensityTexel"), 1 / this.w, 1 / this.h);
       this.bindTex(0, src.tex, this.loc(this.updateProg, "uPos"));
       this.bindTex(1, this.field.tex, this.loc(this.updateProg, "uField"));
+      if (this.density) this.bindTex(2, this.density.tex, this.loc(this.updateProg, "uDensity"));
       this.quad();
       this.flip = !this.flip;
     }

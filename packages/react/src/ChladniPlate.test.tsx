@@ -7,6 +7,8 @@ import { ChladniPlate } from "./ChladniPlate";
 const fake = {
   setParams: vi.fn(),
   setAnalyser: vi.fn(),
+  setState: vi.fn(),
+  getState: () => "talking",
   freeze: vi.fn(),
   reset: vi.fn(),
   resetSand: vi.fn(),
@@ -91,5 +93,30 @@ describe("ChladniPlate", () => {
       root.render(<ChladniPlate frozen={true} />);
     });
     expect(fake.freeze).toHaveBeenLastCalledWith(true);
+  });
+
+  it("state follows the state prop", async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root.render(<ChladniPlate state="idle" />);
+    });
+    expect(fake.setState).toHaveBeenLastCalledWith("idle");
+    await act(async () => {
+      root.render(<ChladniPlate state="listening" />);
+    });
+    expect(fake.setState).toHaveBeenLastCalledWith("listening");
+  });
+
+  it("a params change while frozen keeps the plate frozen", async () => {
+    root = createRoot(container);
+    await act(async () => {
+      root.render(<ChladniPlate frozen={true} params={{ plate: { size: 30 } }} />);
+    });
+    await act(async () => {
+      root.render(<ChladniPlate frozen={true} params={{ plate: { size: 40 } }} />);
+    });
+    const arg = fake.setParams.mock.calls.at(-1)![0] as ChladniParams;
+    expect(arg.plate.size).toBe(40);
+    expect(arg.listening.freeze).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ export type PlateModelKind = "studio" | "lab";
 export type Look = "textured" | "classic" | "ink";
 export type MultiTone = "physical" | "morph";
 export type Halo = "none" | "still" | "breathing";
+export type IdleBehaviour = "hold" | "relax";
 
 export interface ChladniParams {
   listening: {
@@ -17,6 +18,12 @@ export interface ChladniParams {
     floor: number;
     /** Hold current figure, stop listening. */
     freeze: boolean;
+    /**
+     * What the sand does in silence: `hold` keeps the last figure; `relax`
+     * lets the grains spread evenly over the plate and shiver until sound
+     * returns.
+     */
+    idle: IdleBehaviour;
   };
   plate: {
     shape: PlateShape;
@@ -86,7 +93,7 @@ export interface ChladniParams {
 }
 
 export const DEFAULT_PARAMS: ChladniParams = {
-  listening: { input: 0, partials: 16, decay: 350, floor: -72, freeze: false },
+  listening: { input: 0, partials: 16, decay: 350, floor: -72, freeze: false, idle: "hold" },
   plate: {
     shape: "circle",
     drive: "exciter",
@@ -147,7 +154,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 24,
     step: 0.1,
     unit: "dB",
-    help: "How hard the sound shakes the plate. Never changes the audio.",
+    help: "How loud the sound seems to the plate. Never changes what you hear.",
   },
   "listening.partials": {
     label: "Partials",
@@ -155,7 +162,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 1,
     max: 32,
     step: 1,
-    help: "How many of the strongest frequencies reach the plate.",
+    help: "How many notes from the sound reach the plate at once.",
   },
   "listening.decay": {
     label: "Decay",
@@ -164,7 +171,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 2000,
     step: 1,
     unit: "ms",
-    help: "How long a frequency keeps pushing after it stops.",
+    help: "How long a note keeps shaking the plate after it stops.",
   },
   "listening.floor": {
     label: "Floor",
@@ -173,24 +180,30 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: -30,
     step: 1,
     unit: "dB",
-    help: "Below this level the plate hears silence.",
+    help: "Sounds quieter than this count as silence.",
   },
   "listening.freeze": {
     label: "Freeze",
     kind: "boolean",
-    help: "Hold the current figure; listening stops.",
+    help: "Pause the plate and keep the figure as it is.",
+  },
+  "listening.idle": {
+    label: "In silence",
+    kind: "enum",
+    options: ["hold", "relax"],
+    help: "When the sound stops: hold keeps the last figure, relax spreads the sand back over the plate until sound returns.",
   },
   "plate.shape": {
     label: "Shape",
     kind: "enum",
     options: ["circle", "square", "diamond"],
-    help: "Plate outline. A square with aspect ≠ 1 is a rectangle; diamond is a square with the corners cut.",
+    help: "The outline of the plate. A square with an aspect other than 1 is a rectangle. Diamond is a square on its corner with the points cut off.",
   },
   "plate.drive": {
     label: "Drive",
     kind: "enum",
     options: ["exciter", "pivot"],
-    help: "Exciter drives from a point; Pivot is Chladni's centre-clamped bench.",
+    help: "Exciter pushes the plate at one spot. Pivot holds it at the centre, like Chladni's bench.",
   },
   "plate.size": {
     label: "Size",
@@ -199,7 +212,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 100,
     step: 0.5,
     unit: "cm",
-    help: "Diameter or side. Bigger → denser figures, lower resonances.",
+    help: "Diameter or side. Bigger plates make finer figures at lower notes.",
   },
   "plate.aspect": {
     label: "Aspect",
@@ -207,7 +220,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0.5,
     max: 2,
     step: 0.05,
-    help: "Rectangle width/height ratio. Ignored for other shapes.",
+    help: "Width divided by height for a square plate. Ignored for other shapes.",
   },
   "plate.density": {
     label: "Density",
@@ -224,7 +237,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0,
     max: 1,
     step: 0.01,
-    help: "0 = whole plate pushed evenly, 1 = point drive.",
+    help: "0 pushes the whole plate evenly. 1 pushes at a single point.",
   },
   "plate.exciterX": {
     label: "Exciter X",
@@ -232,7 +245,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: -1,
     max: 1,
     step: 0.01,
-    help: "Drive point. Modes with a still line under it stay silent.",
+    help: "Where the plate is pushed, left to right. Figures with a still line under that spot cannot form.",
   },
   "plate.exciterY": {
     label: "Exciter Y",
@@ -240,7 +253,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: -1,
     max: 1,
     step: 0.01,
-    help: "Drive point. Modes with a still line under it stay silent.",
+    help: "Where the plate is pushed, bottom to top. Figures with a still line under that spot cannot form.",
   },
   "plate.rotation": {
     label: "Rotation",
@@ -249,13 +262,13 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 360,
     step: 1,
     unit: "°",
-    help: "Plate rotation.",
+    help: "Turn the plate.",
   },
   "plate.model": {
     label: "Model",
     kind: "enum",
     options: ["studio", "lab"],
-    help: "Studio is a stretched membrane with some stiffness; Lab a free-edge plate in real units.",
+    help: "Studio is a simple, fast model. Lab is a real plate in real units.",
   },
   "studio.thickness": {
     label: "Thickness",
@@ -273,7 +286,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 10000,
     step: 10,
     unit: "N/m",
-    help: "Tighter raises every figure in pitch.",
+    help: "Tighter raises every figure in pitch, like tuning a drum.",
   },
   "studio.elasticity": {
     label: "Elasticity",
@@ -282,7 +295,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 400,
     step: 1,
     unit: "GPa",
-    help: "0 is a pure stretched membrane; steel is about 200.",
+    help: "0 is a pure drum skin. Steel is about 200.",
   },
   "lab.thickness": {
     label: "Lab thickness",
@@ -325,7 +338,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0.001,
     max: 0.2,
     step: 0.001,
-    help: "Damping. Higher values widen the resonances and blend the figures.",
+    help: "Damping. Higher values blend neighbouring figures together.",
   },
   "lab.contact": {
     label: "Contact",
@@ -361,13 +374,13 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     max: 10000,
     step: 10,
     unit: "N/m",
-    help: "Tension in the plane of the plate. Solid plates use 0.",
+    help: "How tightly the plate is stretched. Solid plates use 0.",
   },
   "look.look": {
     label: "Look",
     kind: "enum",
     options: ["textured", "classic", "ink"],
-    help: "Textured felt / turned metal / nodal lines only. Painting only, same physics.",
+    help: "Sand on felt, sand on metal, or ink lines only. Only the drawing changes.",
   },
   "look.color": {
     label: "Color",
@@ -386,7 +399,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     label: "Multi-tone",
     kind: "enum",
     options: ["physical", "morph"],
-    help: "Physical adds partial energies (figure holds still); Morph lets them interfere (figure wanders).",
+    help: "Physical adds notes together so the figure holds still. Morph lets them interfere so it wanders.",
   },
   "look.plateBrightness": {
     label: "Plate",
@@ -402,7 +415,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0,
     max: 1,
     step: 0.01,
-    help: "Opacity of the plate surface. 0 draws only the sand on whatever is behind the canvas.",
+    help: "How solid the plate is. At 0 only the sand is drawn, over whatever is behind it.",
   },
   "look.plateColor": {
     label: "Plate color",
@@ -431,18 +444,18 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0.5,
     max: 1.6,
     step: 0.01,
-    help: "Overall brightness, in every view.",
+    help: "Overall brightness of the picture.",
   },
   "look.halo": {
     label: "Halo",
     kind: "enum",
     options: ["none", "still", "breathing"],
-    help: "The glow around the plate: off, steady, or breathing with the energy of the sound.",
+    help: "A soft glow around the rim: off, steady, or breathing with the loudness.",
   },
   "look.tremor": {
     label: "Tremor",
     kind: "boolean",
-    help: "Notes with no resonance shake the plate as a whole.",
+    help: "When no figure fits the sound, shake the whole plate instead.",
   },
   "ink.width": {
     label: "Ink width",
@@ -450,7 +463,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0,
     max: 1,
     step: 0.01,
-    help: "From a thread to a band.",
+    help: "Line thickness, from a thread to a band.",
   },
   "ink.intensity": {
     label: "Ink intensity",
@@ -458,7 +471,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0,
     max: 2,
     step: 0.01,
-    help: "How strongly the ink covers the felt.",
+    help: "How dark the ink is.",
   },
   "ink.fill": {
     label: "Ink fill",
@@ -466,7 +479,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0,
     max: 1,
     step: 0.01,
-    help: "How much of the low valleys is inked. Rich chords show more of it.",
+    help: "How much of the quiet areas gets inked too.",
   },
   "ink.glow": {
     label: "Ink glow",
@@ -474,7 +487,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchemaEntry> = {
     min: 0,
     max: 1,
     step: 0.01,
-    help: "The soft light around the lines. 0 is sharp ink.",
+    help: "A soft light around the lines. 0 is a sharp pen.",
   },
 };
 
