@@ -1,6 +1,6 @@
 {
   "name": "chladni-orb-core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Voice-reactive Chladni plate engine: audio analysis, plate physics, WebGL2 rendering",
   "license": "MIT",
   "type": "module",

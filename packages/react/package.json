@@ -1,6 +1,6 @@
 {
   "name": "chladni-orb",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "React wrapper for chladni-orb-core \u2014 <ChladniPlate />",
   "license": "MIT",
   "type": "module",
