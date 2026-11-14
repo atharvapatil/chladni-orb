@@ -6,5 +6,5 @@
       "chladni-orb-core": ["../core/src/index.ts"]
     }
   },
-  "include": ["src", "tsup.config.ts"]
+  "include": ["src", "tsup.config.ts", "vitest.config.ts"]
 }
