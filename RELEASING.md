@@ -11,9 +11,15 @@ Versions are managed with [Changesets](https://github.com/changesets/changesets)
 
 ## One-time setup
 
-Do these once, before the first release.
+Do these once, before the first release. You do not need an npm organisation: the packages are unscoped (no `@something/` prefix), so any personal npm account can publish them, and the existing GitHub repository is all that is needed on the GitHub side.
 
-### 1. Check the names are free on npm
+### 1. Have an npm account
+
+Sign up at <https://www.npmjs.com/signup> if you do not have one (free), verify the email, and turn on two-factor authentication under Account, Two-Factor Authentication. npm requires 2FA on the account before it will let you create the token in step 3.
+
+The packages will appear under your user profile. If you ever want them under an organisation instead, create one later and transfer them from the package settings page; nothing in this repo changes.
+
+### 2. Check the names are free on npm
 
 The packages are unscoped: `chladni-orb` and `chladni-orb-core`. Both were free when this was written. Confirm before the first publish:
 
@@ -24,19 +30,19 @@ npm view chladni-orb-core version
 
 If either has been taken since, pick new names in `packages/*/package.json`, the two READMEs, the docs' install snippets and the tsconfig/vite aliases (`grep -rn chladni-orb --include=*.{ts,tsx,json,md}`), and publish under those.
 
-### 2. Create an npm automation token
+### 3. Create an npm automation token
 
 On npmjs.com: Avatar, Access Tokens, Generate New Token, **Granular Access Token**. Give it read and write on the two packages (or all packages for the first publish, since they do not exist yet), no expiry shorter than a year, and **bypass 2FA** (the "automation" style token), otherwise CI cannot publish. Copy it once.
 
-### 3. Add the token to GitHub
+### 4. Add the token to GitHub
 
 In the repository: Settings, Secrets and variables, Actions, New repository secret, name `NPM_TOKEN`, paste the token. The release workflow reads it as `secrets.NPM_TOKEN`.
 
-### 4. Let Actions open pull requests
+### 5. Let Actions open pull requests
 
 Settings, Actions, General, Workflow permissions: choose **Read and write permissions** and tick **Allow GitHub Actions to create and approve pull requests**. The release workflow opens a "Version Packages" PR; without this it fails.
 
-### 5. GitHub Pages for the docs
+### 6. GitHub Pages for the docs
 
 Settings, Pages, Source: **GitHub Actions**. The `docs.yml` workflow builds `apps/docs` with `VITE_BASE=/chladni-orb/` and deploys it on every push to `main`. The site lives at <https://atharvapatil.github.io/chladni-orb/>.
 
